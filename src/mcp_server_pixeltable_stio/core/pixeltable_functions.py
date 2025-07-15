@@ -396,8 +396,9 @@ def _run_uv_install(package: str, timeout: int = 600) -> subprocess.CompletedPro
     if not _check_uv_available():
         raise RuntimeError("uv is not available in the system")
     
+    # Use uv add instead of uv pip install for better environment management
     return subprocess.run([
-        'uv', 'pip', 'install', package
+        'uv', 'add', package
     ], capture_output=True, text=True, timeout=timeout)
 
 def _direct_uv_install(package: str) -> Dict[str, Any]:
