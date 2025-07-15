@@ -12,17 +12,17 @@ import logging
 from mcp.server.fastmcp import FastMCP
 
 # Import utilities
-from mcp_server_pixeltable.utils import setup_resilient_process
+from mcp_server_pixeltable_stio.utils import setup_resilient_process
 
 # Import core functionality
-from mcp_server_pixeltable.core.config import (
+from mcp_server_pixeltable_stio.core.config import (
     get_default_pixeltable_path,
     get_system_default_pixeltable_path,
     get_effective_pixeltable_path,
     has_user_default_pixeltable
 )
 
-from mcp_server_pixeltable.core.pixeltable_functions import (
+from mcp_server_pixeltable_stio.core.pixeltable_functions import (
     pixeltable_init,
     pixeltable_create_table,
     pixeltable_get_table,
@@ -49,6 +49,9 @@ from mcp_server_pixeltable.core.pixeltable_functions import (
     pixeltable_install_openai,
     pixeltable_install_huggingface,
     pixeltable_install_all_dependencies,
+    pixeltable_smart_install,
+    pixeltable_auto_install_for_expression,
+    pixeltable_suggest_install_from_error,
     pixeltable_system_diagnostics
 )
 
@@ -149,6 +152,9 @@ def main():
     mcp.tool()(pixeltable_install_openai)
     mcp.tool()(pixeltable_install_huggingface)
     mcp.tool()(pixeltable_install_all_dependencies)
+    mcp.tool()(pixeltable_smart_install)
+    mcp.tool()(pixeltable_auto_install_for_expression)
+    mcp.tool()(pixeltable_suggest_install_from_error)
     mcp.tool()(pixeltable_system_diagnostics)
     
     # Start the server

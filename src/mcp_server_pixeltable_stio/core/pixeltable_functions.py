@@ -254,8 +254,11 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
     missing = []
     available = []
     
+    # Normalize expression for checking
+    expr_lower = expression.lower()
+    
     # Check for YOLOX
-    if 'yolox' in expression.lower():
+    if 'yolox' in expr_lower:
         try:
             from pixeltable.ext.functions import yolox
             available.append('yolox')
@@ -269,7 +272,7 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
             })
     
     # Check for OpenAI
-    if 'openai' in expression.lower():
+    if any(term in expr_lower for term in ['openai', 'gpt']):
         try:
             from pixeltable.functions import openai
             available.append('openai')
@@ -283,7 +286,7 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
             })
     
     # Check for Hugging Face
-    if 'huggingface' in expression.lower():
+    if any(term in expr_lower for term in ['huggingface', 'transformers']):
         try:
             from pixeltable.functions import huggingface
             available.append('huggingface')
@@ -294,6 +297,60 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
                 'size': '~1.5GB',
                 'time': '3-5 minutes',
                 'description': 'Hugging Face transformers'
+            })
+    
+    # Check for Anthropic
+    if any(term in expr_lower for term in ['anthropic', 'claude']):
+        try:
+            from pixeltable.functions import anthropic
+            available.append('anthropic')
+        except ImportError:
+            missing.append({
+                'name': 'anthropic',
+                'packages': ['anthropic'],
+                'size': '~20MB',
+                'time': '1 minute',
+                'description': 'Anthropic Claude API integration'
+            })
+    
+    # Check for other AI services
+    ai_services = {
+        'fireworks': {'packages': ['fireworks-ai'], 'description': 'Fireworks AI API'},
+        'google': {'packages': ['google-genai'], 'description': 'Google Gemini API'},
+        'gemini': {'packages': ['google-genai'], 'description': 'Google Gemini API'},
+        'replicate': {'packages': ['replicate'], 'description': 'Replicate API'},
+        'mistral': {'packages': ['mistralai'], 'description': 'Mistral AI API'},
+        'groq': {'packages': ['groq'], 'description': 'Groq API'},
+        'together': {'packages': ['together'], 'description': 'Together AI API'},
+    }
+    
+    for service, info in ai_services.items():
+        if service in expr_lower:
+            try:
+                # Try to import from pixeltable.functions
+                module = __import__(f'pixeltable.functions.{service}', fromlist=[service])
+                available.append(service)
+            except ImportError:
+                missing.append({
+                    'name': service,
+                    'packages': info['packages'],
+                    'size': '~20MB',
+                    'time': '1 minute',
+                    'description': info['description']
+                })
+    
+    # Check for audio/speech processing
+    if any(term in expr_lower for term in ['whisper', 'speech', 'audio']):
+        try:
+            from pixeltable.ext.functions import whisperx
+            available.append('whisperx')
+        except ImportError:
+            missing.append({
+                'name': 'whisper',
+                'packages': ['openai-whisper'],
+                'size': '~100MB',
+                'time': '2-3 minutes',
+                'description': 'OpenAI Whisper speech recognition'
             })
     
     return {
@@ -342,6 +399,38 @@ def _run_uv_install(package: str, timeout: int = 600) -> subprocess.CompletedPro
     return subprocess.run([
         'uv', 'pip', 'install', package
     ], capture_output=True, text=True, timeout=timeout)
+
+def _direct_uv_install(package: str) -> Dict[str, Any]:
+    """Install a package directly with uv - helper for common packages."""
+    try:
+        logger.info(f"Installing {package} directly with uv...")
+        
+        result = _run_uv_install(package, timeout=300)
+        
+        if result.returncode != 0:
+            return {
+                'success': False,
+                'error': f'Failed to install {package} with uv: {result.stderr}',
+                'stdout': result.stdout
+            }
+        
+        return {
+            'success': True,
+            'message': f'Successfully installed {package} with uv',
+            'package': package,
+            'method': 'direct_uv'
+        }
+        
+    except subprocess.TimeoutExpired:
+        return {
+            'success': False,
+            'error': f'Installation of {package} timed out after 5 minutes'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Installation of {package} failed: {e}'
+        }
 
 def pixeltable_install_yolox() -> Dict[str, Any]:
     """Install YOLOX dependencies for object detection using uv."""
@@ -522,6 +611,269 @@ def pixeltable_install_all_dependencies() -> Dict[str, Any]:
         return {
             'success': False,
             'error': f'Bulk installation failed: {e}'
+        }
+
+def pixeltable_smart_install(package_hint: str) -> Dict[str, Any]:
+    """Smart dependency installer that maps common package names to installation routines.
+    
+    Args:
+        package_hint: Name or hint about what to install (e.g., 'ollama', 'torch', 'yolox', 'openai')
+    
+    Returns:
+        Installation result with success status and details
+    """
+    try:
+        # Normalize the hint
+        hint = package_hint.lower().strip()
+        
+        # Smart mapping of hints to our install functions
+        install_map = {
+            # YOLOX and object detection
+            'yolox': pixeltable_install_yolox,
+            'yolo': pixeltable_install_yolox,
+            'object_detection': pixeltable_install_yolox,
+            'detection': pixeltable_install_yolox,
+            'torch': pixeltable_install_yolox,  # torch usually means ML/vision
+            'pytorch': pixeltable_install_yolox,
+            'torchvision': pixeltable_install_yolox,
+            
+            # OpenAI
+            'openai': pixeltable_install_openai,
+            'gpt': pixeltable_install_openai,
+            'vision': pixeltable_install_openai,
+            'chat': pixeltable_install_openai,
+            
+            # Hugging Face
+            'huggingface': pixeltable_install_huggingface,
+            'transformers': pixeltable_install_huggingface,
+            'hf': pixeltable_install_huggingface,
+            'bert': pixeltable_install_huggingface,
+            'llm': pixeltable_install_huggingface,
+            'sentence-transformers': lambda: _direct_uv_install('sentence-transformers'),
+            'sentence_transformers': lambda: _direct_uv_install('sentence-transformers'),
+            
+            # AI API Services
+            'anthropic': lambda: _direct_uv_install('anthropic'),
+            'claude': lambda: _direct_uv_install('anthropic'),
+            'fireworks': lambda: _direct_uv_install('fireworks-ai'),
+            'fireworks-ai': lambda: _direct_uv_install('fireworks-ai'),
+            'google-genai': lambda: _direct_uv_install('google-genai'),
+            'google_genai': lambda: _direct_uv_install('google-genai'),
+            'gemini': lambda: _direct_uv_install('google-genai'),
+            'replicate': lambda: _direct_uv_install('replicate'),
+            'mistralai': lambda: _direct_uv_install('mistralai'),
+            'mistral': lambda: _direct_uv_install('mistralai'),
+            'groq': lambda: _direct_uv_install('groq'),
+            'together': lambda: _direct_uv_install('together'),
+            
+            # Audio/Speech Processing
+            'whisper': lambda: _direct_uv_install('openai-whisper'),
+            'openai-whisper': lambda: _direct_uv_install('openai-whisper'),
+            'whisperx': lambda: _direct_uv_install('whisperx'),
+            'speech': lambda: _direct_uv_install('openai-whisper'),
+            'audio': lambda: _direct_uv_install('openai-whisper'),
+            
+            # Common packages that should be installed via direct uv
+            'ollama': lambda: _direct_uv_install('ollama'),
+            'pillow': lambda: _direct_uv_install('pillow'),
+            'numpy': lambda: _direct_uv_install('numpy'),
+            'pandas': lambda: _direct_uv_install('pandas'),
+        }
+        
+        # Check if we have a direct mapping
+        if hint in install_map:
+            logger.info(f"Smart installing {hint} using mapped installer")
+            return install_map[hint]()
+        
+        # If no mapping found, try to install the raw package with uv
+        logger.info(f"No mapping found for '{hint}', attempting direct uv install")
+        
+        if not _check_uv_available():
+            return {
+                'success': False,
+                'error': 'uv is not available and no mapping found for this package'
+            }
+        
+        result = _run_uv_install(hint, timeout=300)
+        
+        if result.returncode != 0:
+            return {
+                'success': False,
+                'error': f'Failed to install {hint} with uv: {result.stderr}',
+                'stdout': result.stdout,
+                'suggestion': 'Try one of the supported packages: yolox, openai, huggingface'
+            }
+        
+        return {
+            'success': True,
+            'message': f'Successfully installed {hint} with uv',
+            'method': 'direct_uv',
+            'package': hint
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Smart install failed: {e}'
+        }
+
+def pixeltable_auto_install_for_expression(expression: str) -> Dict[str, Any]:
+    """Automatically detect and install dependencies needed for an expression.
+    
+    Args:
+        expression: The expression that needs dependencies
+        
+    Returns:
+        Installation result with details about what was installed
+    """
+    try:
+        # Check what's missing
+        deps = check_dependencies(expression)
+        
+        if deps['all_satisfied']:
+            return {
+                'success': True,
+                'message': 'All dependencies already satisfied',
+                'available': deps['available'],
+                'installed': []
+            }
+        
+        logger.info(f"Auto-installing {len(deps['missing'])} missing dependencies for expression")
+        
+        installed = []
+        failed = []
+        
+        for dep in deps['missing']:
+            logger.info(f"Installing {dep['name']}...")
+            
+            # Use our smart installer
+            result = pixeltable_smart_install(dep['name'])
+            
+            if result.get('success', False):
+                installed.append(dep['name'])
+                logger.info(f"Successfully installed {dep['name']}")
+            else:
+                failed.append({
+                    'name': dep['name'],
+                    'error': result.get('error', 'Unknown error')
+                })
+                logger.error(f"Failed to install {dep['name']}: {result.get('error')}")
+        
+        if failed:
+            return {
+                'success': len(installed) > 0,  # Partial success if some worked
+                'message': f'Installed {len(installed)}/{len(deps["missing"])} dependencies',
+                'installed': installed,
+                'failed': failed,
+                'partial': True
+            }
+        else:
+            return {
+                'success': True,
+                'message': f'Successfully installed all {len(installed)} missing dependencies',
+                'installed': installed
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Auto-install failed: {e}'
+        }
+
+def pixeltable_suggest_install_from_error(error_message: str) -> Dict[str, Any]:
+    """Analyze an error message and suggest installations.
+    
+    Args:
+        error_message: The error message to analyze
+        
+    Returns:
+        Suggestions for what to install
+    """
+    try:
+        error_lower = error_message.lower()
+        suggestions = []
+        
+        # Common import error patterns
+        if 'no module named' in error_lower:
+            # YOLOX and ML packages
+            if any(term in error_lower for term in ['yolox', 'torch', 'torchvision']):
+                suggestions.append({
+                    'package': 'yolox',
+                    'function': 'pixeltable_install_yolox',
+                    'description': 'Install YOLOX for object detection'
+                })
+            
+            # OpenAI
+            if 'openai' in error_lower:
+                suggestions.append({
+                    'package': 'openai', 
+                    'function': 'pixeltable_install_openai',
+                    'description': 'Install OpenAI for vision and chat functions'
+                })
+            
+            # Hugging Face
+            if any(term in error_lower for term in ['transformers', 'huggingface']):
+                suggestions.append({
+                    'package': 'huggingface',
+                    'function': 'pixeltable_install_huggingface', 
+                    'description': 'Install Hugging Face transformers'
+                })
+            
+            # AI API services
+            ai_services = {
+                'anthropic': 'Install Anthropic Claude API',
+                'fireworks': 'Install Fireworks AI API',
+                'google-genai': 'Install Google Gemini API',
+                'replicate': 'Install Replicate API',
+                'mistralai': 'Install Mistral AI API',
+                'groq': 'Install Groq API',
+                'together': 'Install Together AI API',
+            }
+            
+            for service, description in ai_services.items():
+                if service in error_lower or service.replace('-', '_') in error_lower:
+                    suggestions.append({
+                        'package': service,
+                        'function': 'pixeltable_smart_install',
+                        'description': description
+                    })
+            
+            # Audio/speech processing
+            if any(term in error_lower for term in ['whisper', 'whisperx']):
+                suggestions.append({
+                    'package': 'whisper',
+                    'function': 'pixeltable_smart_install',
+                    'description': 'Install Whisper for speech recognition'
+                })
+                
+            # Extract package name if possible
+            import re
+            match = re.search(r"no module named ['\"]([^'\"]+)['\"]?", error_lower)
+            if match:
+                package_name = match.group(1)
+                suggestions.append({
+                    'package': package_name,
+                    'function': 'pixeltable_smart_install',
+                    'description': f'Try smart install for {package_name}'
+                })
+        
+        if suggestions:
+            return {
+                'success': True,
+                'suggestions': suggestions,
+                'message': f'Found {len(suggestions)} installation suggestion(s)'
+            }
+        else:
+            return {
+                'success': True,
+                'suggestions': [],
+                'message': 'No installation suggestions found for this error'
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Failed to analyze error: {e}'
         }
 
 def pixeltable_system_diagnostics() -> Dict[str, Any]:
@@ -1089,22 +1441,15 @@ def pixeltable_add_computed_column(
         # Auto-install if requested
         if not deps['all_satisfied'] and auto_install:
             logger.info("Auto-installing missing dependencies...")
-            for dep in deps['missing']:
-                if dep['name'] == 'yolox':
-                    install_result = pixeltable_install_yolox()
-                elif dep['name'] == 'openai':
-                    install_result = pixeltable_install_openai()
-                elif dep['name'] == 'huggingface':
-                    install_result = pixeltable_install_huggingface()
-                else:
-                    continue
-                    
-                if not install_result.get('success', False):
-                    return {
-                        "success": False,
-                        "error": f"Failed to auto-install {dep['name']}",
-                        "install_error": install_result.get('error', 'Unknown error')
-                    }
+            install_result = pixeltable_auto_install_for_expression(expression)
+            
+            if not install_result.get('success', False):
+                return {
+                    "success": False,
+                    "error": "Failed to auto-install dependencies",
+                    "install_error": install_result.get('error', 'Unknown error'),
+                    "failed_dependencies": install_result.get('failed', [])
+                }
         
         # Redirect all output to avoid JSON parsing issues
         import sys

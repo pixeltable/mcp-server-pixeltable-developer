@@ -23,7 +23,7 @@ Add to your Claude Desktop config:
         "{path-to-your-repo}",
         "python",
         "-m",
-        "mcp_server_pixeltable"
+        "mcp_server_pixeltable_stio"
       ],
       "env": {
         "PIXELTABLE_HOME": "/Users/{your-username}/.pixeltable",

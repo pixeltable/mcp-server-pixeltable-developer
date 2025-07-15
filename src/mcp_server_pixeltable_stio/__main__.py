@@ -21,7 +21,7 @@ logger.info(f"Module path: {__file__}")
 
 try:
     # Import server main function
-    from mcp_server_pixeltable.server import main
+    from mcp_server_pixeltable_stio.server import main
     
     # Run the server
     if __name__ == "__main__":
@@ -37,7 +37,7 @@ except Exception as e:
     from mcp.server.fastmcp import FastMCP
     
     # Import utility for resilient process
-    from mcp_server_pixeltable.utils import setup_resilient_process
+    from mcp_server_pixeltable_stio.utils import setup_resilient_process
     
     # Make sure we don't exit
     setup_resilient_process()
