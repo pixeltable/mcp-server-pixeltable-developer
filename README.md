@@ -5,7 +5,7 @@
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/yourusername/mcp-server-pixeltable
+git clone https://github.com/goodlux/mcp-server-pixeltable
 cd mcp-server-pixeltable
 uv sync
 ```
