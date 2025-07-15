@@ -34,14 +34,6 @@ Add to your Claude Desktop config:
 }
 ```
 
-## 🚀 What You Get
-
-- **Multimodal AI Database** - Images, audio, video, documents in one place
-- **Local LLM Integration** - Ollama, Llama.cpp, Whisper, YOLOX 
-- **Zero API Costs** - Everything runs locally
-- **UV-Powered Dependencies** - Automatic package management
-- **Production Ready** - Built on Pixeltable's robust foundation
-
 ## 💡 Examples
 
 **Create and populate a table:**
@@ -65,8 +57,6 @@ Claude: Find documents mentioning "AI"
 Claude: Create a summary of this video
 ```
 
-Built while having coffee. ☕
-
 ---
 
-*Requires Claude Desktop and Pixeltable. Works with any local LLM via Ollama.*
+Built while having coffee. ☕
