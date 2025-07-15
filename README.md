@@ -65,10 +65,6 @@ Claude: Find documents mentioning "AI"
 Claude: Create a summary of this video
 ```
 
-## 🎯 Why This Matters
-
-Traditional AI tools require expensive API calls and cloud dependencies. This MCP server gives Claude direct access to a powerful local AI infrastructure that can process any media type without limits.
-
 Built while having coffee. ☕
 
 ---
