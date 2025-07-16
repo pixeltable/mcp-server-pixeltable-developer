@@ -75,3 +75,6 @@ Thumbs.db
 
 # uv
 .python-version
+
+# Testing logs
+pixeltable_testing_logs/

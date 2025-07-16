@@ -52,7 +52,32 @@ from mcp_server_pixeltable_stio.core.pixeltable_functions import (
     pixeltable_smart_install,
     pixeltable_auto_install_for_expression,
     pixeltable_suggest_install_from_error,
-    pixeltable_system_diagnostics
+    pixeltable_system_diagnostics,
+    # New high-priority functions
+    pixeltable_query,
+    pixeltable_create_udf,
+    pixeltable_create_array,
+    pixeltable_create_tools,
+    pixeltable_connect_mcp,
+    # Data type helpers
+    pixeltable_create_image_type,
+    pixeltable_create_video_type,
+    pixeltable_create_audio_type,
+    pixeltable_create_array_type,
+    pixeltable_create_json_type
+)
+
+# Import REPL and bug logging functions
+from mcp_server_pixeltable_stio.core.repl_functions import (
+    execute_python,
+    introspect_function,
+    list_available_functions,
+    install_package,
+    log_bug,
+    log_missing_feature,
+    log_success,
+    generate_bug_report,
+    get_session_summary
 )
 
 # Configure logging
@@ -66,7 +91,7 @@ logger = logging.getLogger(__name__)
 def main():
     """Start the Pixeltable MCP server."""
     # Create MCP server
-    mcp = FastMCP(name="pixeltable", version="0.1.0")
+    mcp = FastMCP(name="pixeltable-stio", version="0.1.0")
     
     # Log server initialization
     logger.info("Pixeltable MCP server initializing")
@@ -89,30 +114,13 @@ def main():
         # Disable Pixeltable console output to prevent JSON parsing issues
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
         
-        # Initialize Pixeltable once at server startup
-        import pixeltable as pxt
-        
-        # Try to force a clean initialization
-        try:
-            # First try without explicit init to see if auto-init worked
-            tables = pxt.list_tables()
-            logger.info(f"Pixeltable auto-initialized successfully, found {len(tables)} tables")
-        except Exception as e:
-            logger.info(f"Auto-init failed: {e}, trying explicit init")
-            try:
-                pxt.init()
-                logger.info("Explicit pxt.init() completed successfully")
-                tables = pxt.list_tables()
-                logger.info(f"After explicit init, found {len(tables)} tables")
-            except Exception as e2:
-                logger.error(f"Explicit init also failed: {e2}")
-                logger.info("Continuing with partial initialization")
-        
-        logger.info(f"Pixeltable setup completed with version {pxt.__version__}")
+        # NOTE: PixelTable initialization is now LAZY - happens on first tool call
+        # This prevents stdout interference during MCP server startup
+        logger.info("PixelTable configuration set - initialization will be lazy")
         
     except Exception as e:
-        logger.error(f"Failed to initialize Pixeltable: {e}")
-        logger.info("Continuing without Pixeltable initialization")
+        logger.error(f"Failed to configure PixelTable: {e}")
+        logger.info("Continuing without PixelTable configuration")
     
     # Configure to never exit on stdin EOF and handle signals
     # original_exit = setup_resilient_process()  # DISABLED - causing restart issues
@@ -156,6 +164,33 @@ def main():
     mcp.tool()(pixeltable_auto_install_for_expression)
     mcp.tool()(pixeltable_suggest_install_from_error)
     mcp.tool()(pixeltable_system_diagnostics)
+    
+    # Register new high-priority functions
+    mcp.tool()(pixeltable_query)
+    mcp.tool()(pixeltable_create_udf)
+    mcp.tool()(pixeltable_create_array)
+    mcp.tool()(pixeltable_create_tools)
+    mcp.tool()(pixeltable_connect_mcp)
+    
+    # Register data type helpers
+    mcp.tool()(pixeltable_create_image_type)
+    mcp.tool()(pixeltable_create_video_type)
+    mcp.tool()(pixeltable_create_audio_type)
+    mcp.tool()(pixeltable_create_array_type)
+    mcp.tool()(pixeltable_create_json_type)
+    
+    # Register REPL and interactive functions
+    mcp.tool()(execute_python)
+    mcp.tool()(introspect_function)
+    mcp.tool()(list_available_functions)
+    mcp.tool()(install_package)
+    
+    # Register bug logging functions
+    mcp.tool()(log_bug)
+    mcp.tool()(log_missing_feature)
+    mcp.tool()(log_success)
+    mcp.tool()(generate_bug_report)
+    mcp.tool()(get_session_summary)
     
     # Start the server
     logger.info("Pixeltable MCP server starting...")

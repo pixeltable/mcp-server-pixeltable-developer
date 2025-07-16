@@ -8,7 +8,9 @@ import logging
 import json
 import subprocess
 import sys
+import io
 from typing import Any, Dict, List, Optional, Union
+from functools import wraps
 
 # Import pixeltable modules
 try:
@@ -18,6 +20,40 @@ except ImportError as e:
     pxt = None
 
 logger = logging.getLogger(__name__)
+
+def suppress_pixeltable_output(func):
+    """Decorator to suppress stdout/stderr during PixelTable operations."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Capture stdout and stderr to prevent JSON corruption
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        captured_output = io.StringIO()
+        captured_errors = io.StringIO()
+        
+        try:
+            sys.stdout = captured_output
+            sys.stderr = captured_errors
+            
+            # Execute the actual function
+            result = func(*args, **kwargs)
+            
+            return result
+            
+        finally:
+            # Always restore stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            
+            # Log any captured output for debugging
+            captured = captured_output.getvalue()
+            captured_err = captured_errors.getvalue()
+            if captured.strip():
+                logger.debug(f"Suppressed stdout from {func.__name__}: {captured.strip()}")
+            if captured_err.strip():
+                logger.debug(f"Suppressed stderr from {func.__name__}: {captured_err.strip()}")
+    
+    return wrapper
 
 def ensure_pixeltable_available():
     """Ensure Pixeltable is available and raise an error if not."""
@@ -963,6 +999,7 @@ def pixeltable_get_table(path: str) -> Dict[str, Any]:
         logger.error(f"Error getting table: {e}")
         raise ValueError(f"Failed to get table: {e}")
 
+@suppress_pixeltable_output
 def pixeltable_list_tables(dir_path: str = '', recursive: bool = True) -> Dict[str, Any]:
     """List tables in a directory."""
     try:
@@ -1335,6 +1372,7 @@ def pixeltable_get_table_schema(table_path: str) -> Dict[str, Any]:
 
 # Additional utilities
 
+@suppress_pixeltable_output
 def pixeltable_get_version() -> Dict[str, Any]:
     """Get Pixeltable version information."""
     try:
@@ -1390,6 +1428,342 @@ def pixeltable_insert_data(table_path: str, data: List[Dict[str, Any]]) -> Dict[
             "success": False,
             "error": str(e)
         }
+
+# =================
+# HIGH PRIORITY MISSING FUNCTIONS
+# =================
+
+def pixeltable_query(table_path: str, limit: Optional[int] = None, columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Generic query interface for PixelTable.
+    
+    This is the universal query function that provides flexible querying capabilities.
+    
+    Args:
+        table_path: Path to the table to query
+        limit: Maximum number of rows to return
+        columns: List of columns to select (if None, selects all)
+        
+    Returns:
+        Query result with success status and data
+    """
+    try:
+        ensure_pixeltable_available()
+        
+        # Get the table
+        table = pxt.get_table(table_path)
+        
+        # Build the query
+        if columns:
+            # Select specific columns
+            result = table.select(*columns)
+        else:
+            # Select all columns
+            result = table.select()
+        
+        # Apply limit if specified
+        if limit:
+            result = result.limit(limit)
+            
+        # Execute and return results
+        data = result.collect()
+        
+        return {
+            "success": True,
+            "data": serialize_result(data)["data"],
+            "row_count": len(data) if isinstance(data, list) else 1,
+            "table_path": table_path,
+            "query_info": {
+                "columns": columns,
+                "limit": limit
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in pixeltable_query: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def pixeltable_create_udf(function_code: str, function_name: str, kwargs: str = "{}") -> Dict[str, Any]:
+    """Create a User Defined Function from code.
+    
+    Allows dynamic creation of custom functions that can be used
+    in computed columns and other PixelTable operations.
+    
+    Args:
+        function_code: Python code for the function
+        function_name: Name for the UDF
+        kwargs: Additional parameters for UDF creation (JSON string)
+        
+    Returns:
+        Success status and UDF information
+    """
+    try:
+        ensure_pixeltable_available()
+        
+        # Parse kwargs from JSON string
+        import json
+        try:
+            parsed_kwargs = json.loads(kwargs)
+        except json.JSONDecodeError as e:
+            return {
+                "success": False,
+                "error": f"Invalid JSON in kwargs: {e}"
+            }
+        
+        # Create a safe execution environment
+        exec_globals = {
+            'pxt': pxt,
+            'pixeltable': pxt,
+            '__builtins__': __builtins__,
+        }
+        
+        # Import commonly used modules
+        try:
+            import numpy as np
+            exec_globals['np'] = np
+            exec_globals['numpy'] = np
+        except ImportError:
+            pass
+            
+        try:
+            from PIL import Image
+            exec_globals['Image'] = Image
+        except ImportError:
+            pass
+        
+        # Execute the function code
+        exec(function_code, exec_globals)
+        
+        # Check if function was created
+        if function_name not in exec_globals:
+            return {
+                "success": False,
+                "error": f"Function '{function_name}' was not defined in the provided code"
+            }
+        
+        created_function = exec_globals[function_name]
+        
+        # Create the UDF using PixelTable's udf decorator
+        udf_func = pxt.udf(created_function, **parsed_kwargs)
+        
+        return {
+            "success": True,
+            "message": f"UDF '{function_name}' created successfully",
+            "function_name": function_name,
+            "udf_info": {
+                "name": function_name,
+                "type": "user_defined_function",
+                "callable": True
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating UDF: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def pixeltable_create_array(elements: list, kwargs: str = "{}") -> Dict[str, Any]:
+    """Create array expressions for PixelTable.
+    
+    Useful for creating complex data structures and expressions
+    that can be used in queries and computed columns.
+    
+    Args:
+        elements: List of elements for the array
+        **kwargs: Additional parameters for array creation
+        
+    Returns:
+        Array expression result
+    """
+    try:
+        ensure_pixeltable_available()
+        
+        # Create PixelTable array expression
+        array_expr = pxt.Array(elements)
+        
+        return {
+            "success": True,
+            "message": f"Array created with {len(elements)} elements",
+            "array_info": {
+                "length": len(elements),
+                "type": "pixeltable_array",
+                "elements": elements[:5] if len(elements) > 5 else elements,  # Show first 5 for preview
+                "truncated": len(elements) > 5
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating array: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def pixeltable_create_tools(udfs: str, kwargs: str = "{}") -> Dict[str, Any]:
+    """Create tools collection for LLM integration.
+    
+    Wraps UDFs for use with language models and tool-calling APIs.
+    Enables integration between PixelTable functions and AI models.
+    
+    Args:
+        *udfs: UDF functions to wrap as tools
+        **kwargs: Additional parameters for tool creation
+        
+    Returns:
+        Tools collection information
+    """
+    try:
+        ensure_pixeltable_available()
+        
+        tools = []
+        for udf in udfs:
+            if callable(udf):
+                tool_info = {
+                    "name": getattr(udf, '__name__', 'unknown'),
+                    "type": "udf_tool",
+                    "callable": True,
+                    "function": udf
+                }
+                tools.append(tool_info)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Invalid UDF provided: {udf} is not callable"
+                }
+        
+        return {
+            "success": True,
+            "message": f"Created tools collection with {len(tools)} tools",
+            "tools": tools,
+            "tool_count": len(tools)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating tools: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def pixeltable_connect_mcp(url: str, kwargs: str = "{}") -> Dict[str, Any]:
+    """Connect to external MCP server and import functions.
+    
+    This enables research dataset sharing and function import capability.
+    Can be used to pull in functions from academic papers,
+    other research groups, or external AI services.
+    
+    Args:
+        url: URL of the MCP server to connect to
+        **kwargs: Additional connection parameters
+        
+    Returns:
+        Connection status and available functions
+    """
+    try:
+        ensure_pixeltable_available()
+        
+        # This is a placeholder implementation
+        # In a real implementation, this would:
+        # 1. Connect to the MCP server at the given URL
+        # 2. Discover available functions
+        # 3. Import and register them in PixelTable
+        
+        return {
+            "success": False,
+            "error": "MCP connection not yet implemented",
+            "message": "This feature is planned for future release",
+            "url": url,
+            "status": "not_implemented"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error connecting to MCP: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# =================
+# DATA TYPE HELPERS
+# =================
+
+def pixeltable_create_image_type(kwargs: str = "{}") -> Dict[str, Any]:
+    """Return pxt.Image type for schema definition."""
+    try:
+        ensure_pixeltable_available()
+        return {
+            "success": True,
+            "type": "Image",
+            "type_object": pxt.Image,
+            "description": "PixelTable Image type for storing image data"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def pixeltable_create_video_type(kwargs: str = "{}") -> Dict[str, Any]:
+    """Return pxt.Video type for schema definition."""
+    try:
+        ensure_pixeltable_available()
+        return {
+            "success": True,
+            "type": "Video",
+            "type_object": pxt.Video,
+            "description": "PixelTable Video type for storing video data"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def pixeltable_create_audio_type(kwargs: str = "{}") -> Dict[str, Any]:
+    """Return pxt.Audio type for schema definition."""
+    try:
+        ensure_pixeltable_available()
+        return {
+            "success": True,
+            "type": "Audio",
+            "type_object": pxt.Audio,
+            "description": "PixelTable Audio type for storing audio data"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def pixeltable_create_array_type(element_type=None, kwargs: str = "{}") -> Dict[str, Any]:
+    """Return pxt.Array type for schema definition."""
+    try:
+        ensure_pixeltable_available()
+        if element_type:
+            array_type = pxt.Array(element_type)
+        else:
+            array_type = pxt.Array
+        return {
+            "success": True,
+            "type": "Array",
+            "type_object": array_type,
+            "description": "PixelTable Array type for storing array data",
+            "element_type": element_type
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def pixeltable_create_json_type(kwargs: str = "{}") -> Dict[str, Any]:
+    """Return pxt.Json type for schema definition."""
+    try:
+        ensure_pixeltable_available()
+        return {
+            "success": True,
+            "type": "Json",
+            "type_object": pxt.Json,
+            "description": "PixelTable Json type for storing JSON data"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# =================
+# EXISTING FUNCTIONS
+# =================
 
 def pixeltable_add_computed_column(
     table_path: str,
