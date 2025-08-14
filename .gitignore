@@ -78,3 +78,6 @@ Thumbs.db
 
 # Testing logs
 pixeltable_testing_logs/
+
+# Sample data
+sample_data/
