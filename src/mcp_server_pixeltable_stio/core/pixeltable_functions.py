@@ -9,6 +9,7 @@ import json
 import subprocess
 import sys
 import io
+import os
 from typing import Any, Dict, List, Optional, Union
 from functools import wraps
 
@@ -432,9 +433,13 @@ def _run_uv_install(package: str, timeout: int = 600) -> subprocess.CompletedPro
     if not _check_uv_available():
         raise RuntimeError("uv is not available in the system")
     
-    # Use uv add instead of uv pip install for better environment management
+    # Get the current Python interpreter path
+    python_path = sys.executable
+    
+    # Use uv pip install with the specific Python environment
+    # This ensures packages are installed where the MCP server is running
     return subprocess.run([
-        'uv', 'add', package
+        'uv', 'pip', 'install', '--python', python_path, package
     ], capture_output=True, text=True, timeout=timeout)
 
 def _direct_uv_install(package: str) -> Dict[str, Any]:

@@ -33,6 +33,7 @@ dependencies = [
     "torchvision>=0.15.0",
     "pixeltable-yolox>=0.4.2",
     "transformers>=4.53.2",
+    "gliner>=0.2.21",
 ]
 
 [project.urls]

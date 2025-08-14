@@ -6,6 +6,7 @@ This module provides functions for getting and setting configuration settings.
 
 import logging
 import os
+import sys
 from typing import Optional, Dict, Any
 import json
 
@@ -19,10 +20,20 @@ def get_system_default_pixeltable_path() -> str:
     """
     Get the system default Pixeltable data path.
     
+    For MCP server running in uv tool environment, default to a path
+    within the tool's directory to avoid polluting the user's home directory.
+    
     Returns:
         Path to the system default Pixeltable data directory
     """
-    return os.path.expanduser("~/.pixeltable")
+    # Check if we're running in a uv tool environment
+    if sys.executable and '.local/share/uv/tools/' in sys.executable:
+        # We're in a uv tool environment - use a datastore within it
+        tool_dir = sys.prefix  # This gives us the tool's venv directory
+        return os.path.join(tool_dir, 'pixeltable_data')
+    else:
+        # Fallback to user home directory for non-tool environments
+        return os.path.expanduser("~/.pixeltable")
 
 def get_default_pixeltable_path() -> Optional[str]:
     """
