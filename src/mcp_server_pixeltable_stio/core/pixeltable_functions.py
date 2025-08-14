@@ -2020,3 +2020,101 @@ def pixeltable_get_datastore() -> Dict[str, Any]:
             "success": False,
             "error": str(e)
         }
+
+def pixeltable_list_tools() -> Dict[str, Any]:
+    """
+    List all available Pixeltable MCP tools with their descriptions.
+    
+    Returns a categorized list of all tools available in this MCP server,
+    including their names and descriptions extracted from docstrings.
+    
+    Returns:
+        Dict containing categorized tools and their descriptions
+    """
+    try:
+        # Import all function modules to get access to the functions
+        import inspect
+        import mcp_server_pixeltable_stio.core.pixeltable_functions as pf
+        import mcp_server_pixeltable_stio.core.repl_functions as rf
+        
+        # Get all pixeltable functions
+        pixeltable_funcs = [
+            (name, func) for name, func in inspect.getmembers(pf)
+            if name.startswith('pixeltable_') and callable(func)
+        ]
+        
+        # Get all REPL functions  
+        repl_funcs = [
+            (name, func) for name, func in inspect.getmembers(rf)
+            if callable(func) and not name.startswith('_')
+        ]
+        
+        # Define categories for better organization
+        categories = {
+            "Table Management": ["create_table", "get_table", "list_tables", "drop_table", "query_table", "get_table_schema"],
+            "Data Operations": ["insert_data", "add_computed_column", "create_view", "create_snapshot", "create_replica"],
+            "Directory Management": ["create_dir", "drop_dir", "list_dirs", "ls", "move"],
+            "Configuration": ["init", "set_datastore", "get_datastore", "configure_logging", "get_version", "list_tools"],
+            "AI/ML Integration": ["create_udf", "create_array", "create_tools", "connect_mcp", "query"],
+            "Data Types": ["create_image_type", "create_video_type", "create_audio_type", "create_array_type", "create_json_type"],
+            "Dependencies": ["check_dependencies", "install_yolox", "install_openai", "install_huggingface", "install_all_dependencies", "smart_install"],
+            "REPL & Debug": ["execute_python", "introspect_function", "list_available_functions", "log_bug", "log_missing_feature", "generate_bug_report"],
+            "Utilities": ["list_functions", "get_types", "system_diagnostics", "auto_install_for_expression", "suggest_install_from_error"],
+        }
+        
+        # Initialize categorized tools
+        categorized = {cat: [] for cat in categories}
+        categorized["Other"] = []
+        
+        # Process all functions
+        all_funcs = pixeltable_funcs + repl_funcs
+        
+        for name, func in all_funcs:
+            # Get description from docstring
+            doc = ""
+            if func.__doc__:
+                # Get first non-empty line of docstring
+                lines = func.__doc__.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        doc = line
+                        break
+            
+            # Categorize the function
+            found = False
+            for cat, keywords in categories.items():
+                if any(kw in name.lower() for kw in keywords):
+                    categorized[cat].append({
+                        "name": name,
+                        "description": doc or "No description available"
+                    })
+                    found = True
+                    break
+            
+            if not found:
+                categorized["Other"].append({
+                    "name": name,
+                    "description": doc or "No description available"
+                })
+        
+        # Remove empty categories and sort tools within each category
+        result = {}
+        total_count = 0
+        for cat, tools in categorized.items():
+            if tools:
+                result[cat] = sorted(tools, key=lambda x: x["name"])
+                total_count += len(tools)
+        
+        return {
+            "success": True,
+            "total_tools": total_count,
+            "categories": result,
+            "message": f"Found {total_count} tools across {len(result)} categories"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
