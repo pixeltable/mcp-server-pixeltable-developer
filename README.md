@@ -1,16 +1,46 @@
-# Pixeltable stio MCP Server
+# Pixeltable MCP Server (Developer Edition)
 
 **Claude meets Pixeltable.** The AI multimodal database, now available as an MCP server.
 
 ## ⚡ Quick Start
 
+### Installation with uv tool (Recommended for Claude Code)
+
 ```bash
-git clone https://github.com/goodlux/mcp-server-pixeltable
-cd mcp-server-pixeltable
+# Install as a global tool
+uv tool install --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
+
+# Update to latest version
+uv tool install --force --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
+```
+
+### Installation from source (For development)
+
+```bash
+git clone https://github.com/goodlux/mcp-server-pixeltable-developer
+cd mcp-server-pixeltable-developer
 uv sync
 ```
 
+### Configuration for Claude Desktop
+
 Add to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "pixeltable": {
+      "command": "mcp-server-pixeltable-developer",
+      "env": {
+        "PIXELTABLE_HOME": "/Users/{your-username}/.pixeltable",
+        "PIXELTABLE_FILE_CACHE_SIZE_G": "10"
+      }
+    }
+  }
+}
+```
+
+Or if running from source:
 
 ```json
 {
@@ -58,6 +88,18 @@ Claude: Create a summary of this video
 ```
 
 ## 🚀 New Features
+
+### Configurable Datastore Path
+Change where Pixeltable stores its data:
+```
+Claude: Set datastore to ~/my-pixeltable-data
+Claude: Get current datastore configuration
+```
+
+The datastore path can be configured through:
+1. Environment variable `PIXELTABLE_HOME` (highest priority)
+2. Persistent configuration file (survives restarts)
+3. System default `~/.pixeltable`
 
 ### Interactive Python REPL
 Execute Python code with PixelTable pre-loaded in a persistent session:
