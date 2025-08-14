@@ -1923,3 +1923,100 @@ def pixeltable_add_computed_column(
             "success": False,
             "error": str(e)
         }
+
+def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
+    """
+    Set the Pixeltable datastore path configuration.
+    
+    This setting will persist across sessions but can be overridden by the 
+    PIXELTABLE_HOME environment variable.
+    
+    Args:
+        path: Path to the datastore directory
+        
+    Returns:
+        Dict with success status and message
+    """
+    try:
+        from mcp_server_pixeltable_stio.core.config import set_datastore_path
+        
+        # Expand the path
+        import os
+        expanded_path = os.path.expanduser(path)
+        
+        # Create directory if it doesn't exist
+        if not os.path.exists(expanded_path):
+            os.makedirs(expanded_path, exist_ok=True)
+            
+        # Set the datastore path
+        if set_datastore_path(path):
+            return {
+                "success": True,
+                "message": f"Datastore path set to: {expanded_path}",
+                "path": expanded_path,
+                "note": "This setting will be used for future sessions. Set PIXELTABLE_HOME environment variable to override."
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Failed to save datastore configuration"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def pixeltable_get_datastore() -> Dict[str, Any]:
+    """
+    Get the current Pixeltable datastore path configuration.
+    
+    Returns information about all configuration sources and the effective path.
+    
+    Returns:
+        Dict with configuration information
+    """
+    try:
+        from mcp_server_pixeltable_stio.core.config import (
+            get_effective_pixeltable_path,
+            get_default_pixeltable_path,
+            get_configured_datastore_path,
+            get_system_default_pixeltable_path
+        )
+        import os
+        
+        effective_path = get_effective_pixeltable_path()
+        env_path = get_default_pixeltable_path()
+        config_path = get_configured_datastore_path()
+        system_default = get_system_default_pixeltable_path()
+        
+        # Check if the effective path exists
+        exists = os.path.exists(effective_path)
+        
+        return {
+            "success": True,
+            "effective_path": effective_path,
+            "exists": exists,
+            "sources": {
+                "environment_variable": env_path,
+                "config_file": config_path,
+                "system_default": system_default
+            },
+            "priority": [
+                "1. PIXELTABLE_HOME environment variable (if set)",
+                "2. Config file setting (persistent)",
+                "3. System default (~/.pixeltable)"
+            ],
+            "current_source": (
+                "environment_variable" if env_path else
+                "config_file" if config_path else
+                "system_default"
+            )
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }

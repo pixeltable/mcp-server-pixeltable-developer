@@ -64,7 +64,10 @@ from mcp_server_pixeltable_stio.core.pixeltable_functions import (
     pixeltable_create_video_type,
     pixeltable_create_audio_type,
     pixeltable_create_array_type,
-    pixeltable_create_json_type
+    pixeltable_create_json_type,
+    # Datastore configuration functions
+    pixeltable_set_datastore,
+    pixeltable_get_datastore
 )
 
 # Import REPL and bug logging functions
@@ -178,6 +181,10 @@ def main():
     mcp.tool()(pixeltable_create_audio_type)
     mcp.tool()(pixeltable_create_array_type)
     mcp.tool()(pixeltable_create_json_type)
+    
+    # Register datastore configuration functions
+    mcp.tool()(pixeltable_set_datastore)
+    mcp.tool()(pixeltable_get_datastore)
     
     # Register REPL and interactive functions
     mcp.tool()(execute_python)
