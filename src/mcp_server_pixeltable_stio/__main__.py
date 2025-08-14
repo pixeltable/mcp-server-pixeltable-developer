@@ -44,5 +44,5 @@ except Exception as e:
     
     # Start minimal MCP server
     logger.info("Starting minimal MCP server after error")
-    minimal_mcp = FastMCP(name="pixeltable-minimal", version="0.1.0")
+    minimal_mcp = FastMCP(name="pixeltable-minimal")
     minimal_mcp.run()
