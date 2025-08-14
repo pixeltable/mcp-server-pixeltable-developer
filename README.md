@@ -4,6 +4,14 @@
 
 ## ⚡ Quick Start
 
+### Prerequisites
+
+You must have `uv` installed. If you don't have it or aren't sure, run:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+Or consult the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
 ### Claude Code Installation (Easiest!)
 
 Just tell Claude:
