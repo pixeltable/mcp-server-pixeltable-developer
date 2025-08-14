@@ -94,7 +94,7 @@ logger = logging.getLogger(__name__)
 def main():
     """Start the Pixeltable MCP server."""
     # Create MCP server
-    mcp = FastMCP(name="pixeltable-stio", version="0.1.0")
+    mcp = FastMCP(name="pixeltable-developer", version="0.1.0")
     
     # Log server initialization
     logger.info("Pixeltable MCP server initializing")

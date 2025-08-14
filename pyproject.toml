@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-server-pixeltable-stio"
+name = "mcp-server-pixeltable-developer"
 version = "0.1.0"
-description = "MCP server for Pixeltable (STIO version)"
+description = "MCP server for Pixeltable (Developer version)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -36,11 +36,11 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/identimoji/mcp-server-pixeltable-stio"
-"Bug Tracker" = "https://github.com/identimoji/mcp-server-pixeltable-stio/issues"
+"Homepage" = "https://github.com/goodlux/mcp-server-pixeltable-developer"
+"Bug Tracker" = "https://github.com/goodlux/mcp-server-pixeltable-developer/issues"
 
 [project.scripts]
-mcp-server-pixeltable-stio = "mcp_server_pixeltable_stio.__main__:main"
+mcp-server-pixeltable-developer = "mcp_server_pixeltable_stio.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_server_pixeltable_stio"]
