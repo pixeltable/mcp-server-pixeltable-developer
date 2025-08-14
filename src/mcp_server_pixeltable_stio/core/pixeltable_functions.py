@@ -2021,6 +2021,138 @@ def pixeltable_get_datastore() -> Dict[str, Any]:
             "error": str(e)
         }
 
+def pixeltable_get_help() -> Dict[str, Any]:
+    """
+    Get comprehensive help and overview of Pixeltable concepts and workflows.
+    
+    Returns a structured guide to understanding Pixeltable's core concepts,
+    typical workflows, and best practices for multimodal AI applications.
+    
+    Returns:
+        Dict containing help sections and examples
+    """
+    return {
+        "success": True,
+        "overview": {
+            "what_is_pixeltable": (
+                "Pixeltable is a Python framework for multimodal AI applications that provides "
+                "incremental storage, transformation, indexing, and orchestration of data. "
+                "It's built on PostgreSQL but extends it with native support for images, video, "
+                "audio, and documents alongside structured data."
+            ),
+            "key_innovation": (
+                "Unlike traditional databases, Pixeltable uses 'computed columns' that automatically "
+                "run AI models and transformations on your data. When you add new data, all dependent "
+                "computations update automatically - this is called 'incremental computation'."
+            ),
+            "architecture": {
+                "storage": "Data stored in ~/.pixeltable with PostgreSQL for metadata and flat files for media",
+                "computation": "Declarative computed columns that auto-update when data changes",
+                "versioning": "Automatic versioning and time-travel queries for all data changes"
+            }
+        },
+        
+        "core_concepts": {
+            "tables": (
+                "Tables store your multimodal data. Unlike SQL tables, they natively handle "
+                "images, video, audio, and documents. Create with pixeltable_create_table()."
+            ),
+            "computed_columns": (
+                "Columns that automatically compute values using Python expressions or AI models. "
+                "Example: Add object detection that runs on every image automatically. "
+                "Use pixeltable_add_computed_column()."
+            ),
+            "views": (
+                "Filtered or transformed views of tables. Like SQL views but with full "
+                "multimodal support. Changes to base table automatically propagate."
+            ),
+            "snapshots": (
+                "Immutable copies of a table at a point in time. Useful for reproducibility "
+                "and comparing model outputs across versions."
+            ),
+            "incremental_updates": (
+                "When you add data or change a computed column, Pixeltable only recomputes "
+                "what's necessary, saving time and compute costs."
+            )
+        },
+        
+        "data_types": {
+            "multimodal": ["pxt.Image", "pxt.Video", "pxt.Audio", "pxt.Document"],
+            "structured": ["String", "Int", "Float", "Bool", "Json", "Array"],
+            "special": ["Embeddings (for vector search)", "File paths and URLs"]
+        },
+        
+        "typical_workflows": {
+            "1_basic_flow": [
+                "Create table: pixeltable_create_table() with schema",
+                "Insert data: pixeltable_insert_data() with images/videos/text",
+                "Add AI: pixeltable_add_computed_column() with model inference",
+                "Query: pixeltable_query_table() to get results"
+            ],
+            "2_computer_vision": [
+                "Create table with pxt.Image column",
+                "Insert images from directory or URLs",
+                "Add YOLOX for object detection: 'yolox.yolox(image, threshold=0.5)'",
+                "Add OpenAI Vision: 'openai.vision(prompt, image)'",
+                "Query results with filters"
+            ],
+            "3_rag_pipeline": [
+                "Create table with pxt.Document column",
+                "Insert documents (PDFs, text files)",
+                "Add embedding column: 'sentence_transformers.embed(text)'",
+                "Create embedding index for vector search",
+                "Query with similarity search"
+            ],
+            "4_video_analysis": [
+                "Create table with pxt.Video column",
+                "Extract frames as computed column",
+                "Run models on frames (object detection, classification)",
+                "Aggregate results across frames"
+            ]
+        },
+        
+        "ai_integrations": {
+            "cloud_providers": ["OpenAI (GPT, DALL-E, Whisper)", "Anthropic (Claude)", "Google (Gemini)", "Fireworks"],
+            "local_models": ["Ollama", "Sentence Transformers", "YOLOX", "Hugging Face models"],
+            "custom_models": "Create UDFs with pixeltable_create_udf() for any Python function"
+        },
+        
+        "best_practices": [
+            "Use computed columns instead of manual processing - they auto-update",
+            "Leverage incremental computation - only new data gets processed",
+            "Create views for different use cases instead of duplicating data",
+            "Use snapshots before major changes for rollback capability",
+            "Set appropriate num_retained_versions to manage storage"
+        ],
+        
+        "common_patterns": {
+            "batch_inference": "Add computed column → Pixeltable handles batching automatically",
+            "model_comparison": "Add multiple computed columns with different models → Query to compare",
+            "data_validation": "Use computed columns with Python expressions for validation rules",
+            "feature_engineering": "Chain computed columns for complex transformations"
+        },
+        
+        "getting_started": {
+            "simple_example": {
+                "description": "Analyze images with AI",
+                "steps": [
+                    "pixeltable_init() - Initialize Pixeltable",
+                    "pixeltable_create_table('images', {'image': 'Image', 'label': 'String'})",
+                    "pixeltable_insert_data('images', [{'image': 'cat.jpg', 'label': 'cat'}])",
+                    "pixeltable_add_computed_column('images', 'objects', 'yolox.yolox(image)')",
+                    "pixeltable_query_table('images') - See detected objects"
+                ]
+            }
+        },
+        
+        "tips": [
+            "Check dependencies before adding AI columns: pixeltable_check_dependencies()",
+            "Use pixeltable_list_tools() to see all available operations",
+            "Set custom datastore path: pixeltable_set_datastore('/my/path')",
+            "Use execute_python() for interactive exploration with pxt pre-loaded"
+        ]
+    }
+
 def pixeltable_list_tools() -> Dict[str, Any]:
     """
     List all available Pixeltable MCP tools with their descriptions.
