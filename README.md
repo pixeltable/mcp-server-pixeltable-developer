@@ -4,11 +4,21 @@
 
 ## ⚡ Quick Start
 
-### Installation with uv tool (Recommended for Claude Code)
+### Claude Code Installation (Easiest!)
+
+Just tell Claude:
+> "Install https://github.com/goodlux/mcp-server-pixeltable-developer as a uv tool and add it to your MCPs"
+
+That's it! Claude will handle the installation and configuration for you.
+
+### Manual Installation with uv tool
 
 ```bash
 # Install as a global tool
 uv tool install --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
+
+# Add to Claude Code
+claude mcp add pixeltable mcp-server-pixeltable-developer
 
 # Update to latest version
 uv tool install --force --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
