@@ -1,5 +1,7 @@
 # Pixeltable MCP Server (Developer Edition)
 
+**⚠️ WARNING: THIS IS AN EXPERIMENTAL DEVELOPMENT TOOL. DO NOT USE WITH IMPORTANT DATA. THIS IS FOR DEMO PURPOSES ONLY UNTIL FURTHER NOTICE.**
+
 **Claude meets Pixeltable.** The AI multimodal database, now available as an MCP server.
 
 ## ⚡ Quick Start
