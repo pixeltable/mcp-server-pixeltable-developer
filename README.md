@@ -2,7 +2,7 @@
 
 **⚠️ WARNING: THIS IS AN EXPERIMENTAL DEVELOPMENT TOOL. DO NOT USE WITH IMPORTANT DATA. THIS IS FOR DEMO PURPOSES ONLY UNTIL FURTHER NOTICE.**
 
-**Claude meets Pixeltable.** The AI multimodal database, now available as an MCP server.
+**Claude meets Pixeltable.** Multimodal AI data infrastructure - not (just) a database - now available as an MCP server.
 
 ## ⚡ Quick Start
 
@@ -44,6 +44,8 @@ uv sync
 
 ### Configuration for Claude Desktop
 
+**⚠️ Note**: If you experience issues with Claude Desktop configuration, you may need to restart Claude Desktop after adding the MCP server configuration.
+
 Add to your Claude Desktop config:
 
 ```json
@@ -83,6 +85,54 @@ Or if running from source:
   }
 }
 ```
+
+### Configuration for Cursor
+
+Cursor users can add the Pixeltable MCP server to their `.cursorrules` file or configure it through Cursor's MCP settings:
+
+1. **Via Cursor Settings:**
+   - Open Cursor Settings
+   - Navigate to "Features" → "Model Context Protocol"
+   - Add a new MCP server with command: `mcp-server-pixeltable-developer`
+
+2. **Via JSON Configuration:**
+   Add to your Cursor MCP configuration:
+   ```json
+   {
+     "mcpServers": {
+       "pixeltable": {
+         "command": "mcp-server-pixeltable-developer",
+         "env": {
+           "PIXELTABLE_HOME": "/Users/{your-username}/.pixeltable",
+           "PIXELTABLE_FILE_CACHE_SIZE_G": "10"
+         }
+       }
+     }
+   }
+   ```
+
+3. **For development/source installations:**
+   ```json
+   {
+     "mcpServers": {
+       "pixeltable": {
+         "command": "uv",
+         "args": [
+           "run",
+           "--directory",
+           "{path-to-your-repo}",
+           "python",
+           "-m",
+           "mcp_server_pixeltable_stio"
+         ],
+         "env": {
+           "PIXELTABLE_HOME": "/Users/{your-username}/.pixeltable",
+           "PIXELTABLE_FILE_CACHE_SIZE_G": "10"
+         }
+       }
+     }
+   }
+   ```
 
 ## 💡 Examples
 
@@ -147,6 +197,35 @@ Bug logs are saved to `pixeltable_testing_logs/` in both Markdown and JSON forma
 - **Introspection**: Discover functions and get docs on-demand
 - **Bug Logging**: Document issues systematically during development
 - **Future-proof**: Adapts to PixelTable API changes automatically
+
+---
+
+## 🔧 Troubleshooting
+
+### Claude Desktop Issues
+If you're having trouble with Claude Desktop:
+1. Restart Claude Desktop after adding the MCP server configuration
+2. Check that the path to your Pixeltable home directory is correct
+3. Ensure you have the latest version of Claude Desktop
+4. Verify that `uv` is installed and accessible from your PATH
+
+### Cursor Issues
+If Cursor isn't recognizing the MCP server:
+1. Make sure you have MCP support enabled in Cursor settings
+2. Restart Cursor after configuration changes
+3. Check the Cursor logs for any error messages
+
+### Installation Issues
+If installation fails:
+1. Ensure you have Python 3.10+ installed
+2. Make sure `uv` is installed: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+3. Try installing from source if the GitHub installation fails
+
+### Getting Help
+If you encounter issues:
+1. Use the built-in bug logging: `Claude: log_bug("description", severity="high")`
+2. Check the generated bug report: `Claude: generate_bug_report()`
+3. File an issue on the [GitHub repository](https://github.com/goodlux/mcp-server-pixeltable-developer/issues)
 
 ---
 

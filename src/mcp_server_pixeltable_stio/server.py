@@ -85,6 +85,9 @@ from mcp_server_pixeltable_stio.core.repl_functions import (
     get_session_summary
 )
 
+# Import prompt helper
+from mcp_server_pixeltable_stio.prompt import PIXELTABLE_USAGE_PROMPT
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -202,6 +205,12 @@ def main():
     mcp.tool()(log_success)
     mcp.tool()(generate_bug_report)
     mcp.tool()(get_session_summary)
+    
+    # Register prompt resources to help LLMs understand how to use Pixeltable
+    @mcp.prompt()
+    def pixeltable_usage_guide() -> str:
+        """A comprehensive guide on how to effectively use the Pixeltable MCP server for multimodal AI data workflows."""
+        return PIXELTABLE_USAGE_PROMPT
     
     # Start the server
     logger.info("Pixeltable MCP server starting...")
