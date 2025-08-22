@@ -17,7 +17,7 @@ Or consult the [uv installation guide](https://docs.astral.sh/uv/getting-started
 ### Claude Code Installation (Easiest!)
 
 Just tell Claude:
-> "Install https://github.com/goodlux/mcp-server-pixeltable-developer as a uv tool and add it to your MCPs"
+> "Install https://github.com/pixeltable/mcp-server-pixeltable-developer as a uv tool and add it to your MCPs"
 
 That's it! Claude will handle the installation and configuration for you.
 
@@ -25,19 +25,19 @@ That's it! Claude will handle the installation and configuration for you.
 
 ```bash
 # Install as a global tool
-uv tool install --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
+uv tool install --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
 
 # Add to Claude Code
 claude mcp add pixeltable mcp-server-pixeltable-developer
 
 # Update to latest version
-uv tool install --force --from git+https://github.com/goodlux/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
+uv tool install --force --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
 ```
 
 ### Installation from source (For development)
 
 ```bash
-git clone https://github.com/goodlux/mcp-server-pixeltable-developer
+git clone https://github.com/pixeltable/mcp-server-pixeltable-developer
 cd mcp-server-pixeltable-developer
 uv sync
 ```
