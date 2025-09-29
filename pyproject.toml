@@ -24,7 +24,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pixeltable>=0.4.7",
+    "pixeltable>=0.4.14",
     "mcp[cli]>=1.0.0",
     "requests>=2.31.0",
     "toml>=0.10.2",
