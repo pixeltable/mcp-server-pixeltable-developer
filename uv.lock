@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'darwin'",
@@ -1304,6 +1304,7 @@ dependencies = [
     { name = "ollama" },
     { name = "pixeltable" },
     { name = "pixeltable-yolox" },
+    { name = "requests" },
     { name = "sentence-transformers" },
     { name = "torch" },
     { name = "torchvision" },
@@ -1318,6 +1319,7 @@ requires-dist = [
     { name = "ollama", specifier = ">=0.5.1" },
     { name = "pixeltable", specifier = ">=0.4.7" },
     { name = "pixeltable-yolox", specifier = ">=0.4.2" },
+    { name = "requests", specifier = ">=2.31.0" },
     { name = "sentence-transformers", specifier = ">=5.0.0" },
     { name = "torch", specifier = ">=2.0.0" },
     { name = "torchvision", specifier = ">=0.15.0" },

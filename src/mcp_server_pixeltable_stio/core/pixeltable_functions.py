@@ -2255,3 +2255,89 @@ def pixeltable_list_tools() -> Dict[str, Any]:
             "success": False,
             "error": str(e)
         }
+
+def pixeltable_search_docs(query: str, max_results: int = 5) -> Dict[str, Any]:
+    """
+    Search Pixeltable documentation using Mintlify's MCP endpoint.
+
+    Args:
+        query: Search query string
+        max_results: Maximum number of results to return (default: 5)
+
+    Returns:
+        Dict with search results including titles, links, and snippets
+    """
+    try:
+        import requests
+        import json
+
+        # Call Mintlify MCP endpoint
+        response = requests.post(
+            "https://docs.pixeltable.com/mcp",
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json"
+            },
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "SearchPixeltableDocumentation",
+                    "arguments": {"query": query}
+                }
+            },
+            timeout=10
+        )
+
+        # Parse SSE response
+        results = []
+        for line in response.text.split('\n'):
+            if line.startswith('data: '):
+                data = json.loads(line[6:])
+                if 'result' in data and 'content' in data['result']:
+                    for item in data['result']['content'][:max_results]:
+                        text = item.get('text', '')
+                        lines = text.split('\n')
+
+                        # Parse title and link
+                        title = ''
+                        link = ''
+                        content = ''
+
+                        for i, line_text in enumerate(lines):
+                            if line_text.startswith('Title: '):
+                                title = line_text[7:]
+                            elif line_text.startswith('Link: '):
+                                link = line_text[6:]
+                            elif line_text.startswith('Content: '):
+                                # Everything after "Content: " is the actual content
+                                content = '\n'.join(lines[i:]).replace('Content: ', '', 1)
+                                break
+
+                        if title and link:
+                            results.append({
+                                'title': title,
+                                'link': link,
+                                'snippet': content[:500] if content else 'No content available'
+                            })
+                    break
+
+        return {
+            "success": True,
+            "query": query,
+            "results_count": len(results),
+            "results": results,
+            "message": f"Found {len(results)} results for '{query}'"
+        }
+
+    except requests.exceptions.RequestException as e:
+        return {
+            "success": False,
+            "error": f"Network error searching docs: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error searching docs: {str(e)}"
+        }

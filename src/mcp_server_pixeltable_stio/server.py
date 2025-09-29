@@ -69,7 +69,8 @@ from mcp_server_pixeltable_stio.core.pixeltable_functions import (
     pixeltable_set_datastore,
     pixeltable_get_datastore,
     pixeltable_list_tools,
-    pixeltable_get_help
+    pixeltable_get_help,
+    pixeltable_search_docs
 )
 
 # Import REPL and bug logging functions
@@ -192,6 +193,7 @@ def main():
     mcp.tool()(pixeltable_get_datastore)
     mcp.tool()(pixeltable_list_tools)
     mcp.tool()(pixeltable_get_help)
+    mcp.tool()(pixeltable_search_docs)
     
     # Register REPL and interactive functions
     mcp.tool()(execute_python)
