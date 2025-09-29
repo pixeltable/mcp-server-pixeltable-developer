@@ -15,13 +15,6 @@ from mcp.server.fastmcp import FastMCP
 from mcp_server_pixeltable_stio.utils import setup_resilient_process
 
 # Import core functionality
-from mcp_server_pixeltable_stio.core.config import (
-    get_default_pixeltable_path,
-    get_system_default_pixeltable_path,
-    get_effective_pixeltable_path,
-    has_user_default_pixeltable
-)
-
 from mcp_server_pixeltable_stio.core.pixeltable_functions import (
     pixeltable_init,
     pixeltable_create_table,
@@ -105,33 +98,15 @@ def main():
     # Log server initialization
     logger.info("Pixeltable MCP server initializing")
     
-    # Load configuration and set up Pixeltable
+    # Simple setup - just disable stdout to prevent JSON parsing issues
     try:
-        from mcp_server_pixeltable_stio.core.config import load_config, get_datastore_path
-
-        config = load_config()
-        datastore_path = get_datastore_path()
-        logger.info(f"Using Pixeltable datastore: {datastore_path}")
-
-        # Set environment variable to the configured path
-        # This ensures Pixeltable uses our configured location
-        os.environ['PIXELTABLE_HOME'] = datastore_path
-
-        # Set cache size from config
-        cache_size = config.get('cache', {}).get('file_cache_size_gb', 10)
-        os.environ['PIXELTABLE_FILE_CACHE_SIZE_G'] = str(cache_size)
-        logger.info(f"Set file cache size to {cache_size} GB")
-
         # Disable Pixeltable console output to prevent JSON parsing issues
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
-        
-        # NOTE: PixelTable initialization is now LAZY - happens on first tool call
-        # This prevents stdout interference during MCP server startup
-        logger.info("PixelTable configuration set - initialization will be lazy")
-        
+
+        logger.info("Pixeltable MCP server ready")
+
     except Exception as e:
-        logger.error(f"Failed to configure PixelTable: {e}")
-        logger.info("Continuing without PixelTable configuration")
+        logger.error(f"Failed during startup: {e}")
     
     # Configure to never exit on stdin EOF and handle signals
     # original_exit = setup_resilient_process()  # DISABLED - causing restart issues

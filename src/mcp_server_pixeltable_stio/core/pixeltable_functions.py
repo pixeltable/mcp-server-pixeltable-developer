@@ -1931,7 +1931,9 @@ def pixeltable_add_computed_column(
 
 def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
     """
-    Set the Pixeltable datastore path and switch to it.
+    Change the Pixeltable datastore location.
+
+    Updates config.toml and calls pxt.init() to switch to the new location.
 
     Args:
         path: Path to the datastore directory
@@ -1951,13 +1953,10 @@ def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
         if not os.path.exists(expanded_path):
             os.makedirs(expanded_path, exist_ok=True)
 
-        # Update config file
+        # Update config.toml file
         set_datastore_path(expanded_path)
 
-        # Set environment variable
-        os.environ['PIXELTABLE_HOME'] = expanded_path
-
-        # Reinitialize Pixeltable
+        # Reinitialize Pixeltable to use the new path from config
         pxt.init()
 
         # Get tables in the new datastore
