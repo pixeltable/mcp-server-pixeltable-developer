@@ -1953,11 +1953,12 @@ def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
         if not os.path.exists(expanded_path):
             os.makedirs(expanded_path, exist_ok=True)
 
-        # Update config.toml file
+        # Update MCP's config.toml to remember this choice
         set_datastore_path(expanded_path)
 
-        # Reinitialize Pixeltable to use the new path from config
-        pxt.init()
+        # Reinitialize Pixeltable with the new path!
+        # THIS is what we should have been doing all along!
+        pxt.init({'pixeltable.home': expanded_path})
 
         # Get tables in the new datastore
         tables = pxt.list_tables()
