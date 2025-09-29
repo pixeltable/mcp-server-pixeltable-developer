@@ -1929,45 +1929,86 @@ def pixeltable_add_computed_column(
             "error": str(e)
         }
 
-def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
+def pixeltable_set_datastore(path: str, switch_now: bool = True) -> Dict[str, Any]:
     """
-    Set the Pixeltable datastore path configuration.
-    
-    This setting will persist across sessions but can be overridden by the 
-    PIXELTABLE_HOME environment variable.
-    
+    Set the Pixeltable datastore path and optionally switch to it immediately.
+
+    This function:
+    1. Updates the config.toml file with the new path
+    2. If switch_now=True: Sets PIXELTABLE_HOME and reinitializes Pixeltable
+    3. If switch_now=False: Changes take effect on next MCP restart
+
     Args:
         path: Path to the datastore directory
-        
+        switch_now: If True, switch to the new datastore immediately (default: True)
+
     Returns:
-        Dict with success status and message
+        Dict with success status, new path, and tables in the new datastore
     """
     try:
         from mcp_server_pixeltable_stio.core.config import set_datastore_path
-        
-        # Expand the path
         import os
+
+        # Expand the path
         expanded_path = os.path.expanduser(path)
-        
+
         # Create directory if it doesn't exist
         if not os.path.exists(expanded_path):
             os.makedirs(expanded_path, exist_ok=True)
-            
-        # Set the datastore path
-        if set_datastore_path(path):
+            logger.info(f"Created new datastore directory: {expanded_path}")
+
+        # Update config file
+        if not set_datastore_path(expanded_path):
+            return {
+                "success": False,
+                "error": "Failed to update configuration file"
+            }
+
+        if switch_now:
+            import pixeltable as pxt
+
+            # Update environment variable
+            os.environ['PIXELTABLE_HOME'] = expanded_path
+            logger.info(f"Set PIXELTABLE_HOME to: {expanded_path}")
+
+            # Reinitialize Pixeltable with new path
+            try:
+                pxt.init()
+                logger.info(f"Reinitialized Pixeltable with datastore: {expanded_path}")
+            except Exception as init_error:
+                logger.error(f"Failed to reinitialize Pixeltable: {init_error}")
+                return {
+                    "success": False,
+                    "error": f"Failed to reinitialize Pixeltable: {str(init_error)}"
+                }
+
+            # Get list of tables in new datastore
+            try:
+                tables = pxt.list_tables()
+                logger.info(f"Found {len(tables)} tables in new datastore")
+            except Exception as list_error:
+                logger.warning(f"Could not list tables: {list_error}")
+                tables = []
+
             return {
                 "success": True,
-                "message": f"Datastore path set to: {expanded_path}",
+                "message": f"Switched to datastore: {expanded_path}",
                 "path": expanded_path,
-                "note": "This setting will be used for future sessions. Set PIXELTABLE_HOME environment variable to override."
+                "tables": tables,
+                "table_count": len(tables),
+                "switched": True
             }
         else:
             return {
-                "success": False,
-                "error": "Failed to save datastore configuration"
+                "success": True,
+                "message": f"Datastore path updated to: {expanded_path}",
+                "path": expanded_path,
+                "note": "Changes will take effect on next MCP restart",
+                "switched": False
             }
-            
+
     except Exception as e:
+        logger.error(f"Error setting datastore: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -1983,43 +2024,40 @@ def pixeltable_get_datastore() -> Dict[str, Any]:
         Dict with configuration information
     """
     try:
-        from mcp_server_pixeltable_stio.core.config import (
-            get_effective_pixeltable_path,
-            get_default_pixeltable_path,
-            get_configured_datastore_path,
-            get_system_default_pixeltable_path
-        )
+        from mcp_server_pixeltable_stio.core.config import load_config, get_config_path
         import os
-        
-        effective_path = get_effective_pixeltable_path()
-        env_path = get_default_pixeltable_path()
-        config_path = get_configured_datastore_path()
-        system_default = get_system_default_pixeltable_path()
-        
-        # Check if the effective path exists
-        exists = os.path.exists(effective_path)
-        
+        import pixeltable as pxt
+
+        # Load config
+        config = load_config()
+        config_path = get_config_path()
+        datastore_path = config.get('storage', {}).get('datastore_path', '~/.pixeltable')
+        datastore_path = os.path.expanduser(datastore_path)
+
+        # Check what's currently in use by PIXELTABLE_HOME
+        env_path = os.environ.get('PIXELTABLE_HOME')
+        currently_active = env_path if env_path else datastore_path
+
+        # Check if the path exists
+        exists = os.path.exists(currently_active)
+
+        # Try to get tables from currently active datastore
+        try:
+            tables = pxt.list_tables()
+        except:
+            tables = []
+
         return {
             "success": True,
-            "effective_path": effective_path,
+            "config_file": config_path,
+            "configured_path": datastore_path,
+            "currently_active": currently_active,
             "exists": exists,
-            "sources": {
-                "environment_variable": env_path,
-                "config_file": config_path,
-                "system_default": system_default
-            },
-            "priority": [
-                "1. PIXELTABLE_HOME environment variable (if set)",
-                "2. Config file setting (persistent)",
-                "3. System default (~/.pixeltable)"
-            ],
-            "current_source": (
-                "environment_variable" if env_path else
-                "config_file" if config_path else
-                "system_default"
-            )
+            "tables": tables,
+            "table_count": len(tables),
+            "cache_size_gb": config.get('cache', {}).get('file_cache_size_gb', 10)
         }
-        
+
     except Exception as e:
         return {
             "success": False,
