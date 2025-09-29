@@ -27,6 +27,7 @@ dependencies = [
     "pixeltable>=0.4.7",
     "mcp[cli]>=1.0.0",
     "requests>=2.31.0",
+    "toml>=0.10.2",
 ]
 
 [project.optional-dependencies]

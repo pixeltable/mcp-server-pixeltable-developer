@@ -105,21 +105,23 @@ def main():
     # Log server initialization
     logger.info("Pixeltable MCP server initializing")
     
-    # Try to initialize Pixeltable with appropriate data directory
+    # Load configuration and set up Pixeltable
     try:
-        effective_path = get_effective_pixeltable_path()
-        logger.info(f"Using Pixeltable data path: {effective_path}")
-        
-        # Set environment variable if needed
-        if not has_user_default_pixeltable():
-            os.environ['PIXELTABLE_HOME'] = effective_path
-            logger.info(f"Set PIXELTABLE_HOME environment variable to: {effective_path}")
-        
-        # Set required Pixeltable configuration
-        if 'PIXELTABLE_FILE_CACHE_SIZE_G' not in os.environ:
-            os.environ['PIXELTABLE_FILE_CACHE_SIZE_G'] = '10'
-            logger.info("Set PIXELTABLE_FILE_CACHE_SIZE_G=10")
-            
+        from mcp_server_pixeltable_stio.core.config import load_config, get_datastore_path
+
+        config = load_config()
+        datastore_path = get_datastore_path()
+        logger.info(f"Using Pixeltable datastore: {datastore_path}")
+
+        # Set environment variable to the configured path
+        # This ensures Pixeltable uses our configured location
+        os.environ['PIXELTABLE_HOME'] = datastore_path
+
+        # Set cache size from config
+        cache_size = config.get('cache', {}).get('file_cache_size_gb', 10)
+        os.environ['PIXELTABLE_FILE_CACHE_SIZE_G'] = str(cache_size)
+        logger.info(f"Set file cache size to {cache_size} GB")
+
         # Disable Pixeltable console output to prevent JSON parsing issues
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
         
