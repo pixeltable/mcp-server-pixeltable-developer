@@ -26,6 +26,11 @@ classifiers = [
 dependencies = [
     "pixeltable>=0.4.7",
     "mcp[cli]>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+all = [
     "ollama>=0.5.1",
     "fireworks-ai>=0.19.0",
     "sentence-transformers>=5.0.0",
@@ -34,7 +39,19 @@ dependencies = [
     "pixeltable-yolox>=0.4.2",
     "transformers>=4.53.2",
     "gliner>=0.2.21",
-    "requests>=2.31.0",
+]
+ml = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "transformers>=4.53.2",
+    "sentence-transformers>=5.0.0",
+]
+llm = [
+    "ollama>=0.5.1",
+    "fireworks-ai>=0.19.0",
+]
+vision = [
+    "pixeltable-yolox>=0.4.2",
 ]
 
 [project.urls]
