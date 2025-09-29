@@ -1929,24 +1929,19 @@ def pixeltable_add_computed_column(
             "error": str(e)
         }
 
-def pixeltable_set_datastore(path: str, switch_now: bool = True) -> Dict[str, Any]:
+def pixeltable_set_datastore(path: str) -> Dict[str, Any]:
     """
-    Set the Pixeltable datastore path and optionally switch to it immediately.
-
-    This function:
-    1. Updates the config.toml file with the new path
-    2. If switch_now=True: Sets PIXELTABLE_HOME and reinitializes Pixeltable
-    3. If switch_now=False: Changes take effect on next MCP restart
+    Set the Pixeltable datastore path and switch to it.
 
     Args:
         path: Path to the datastore directory
-        switch_now: If True, switch to the new datastore immediately (default: True)
 
     Returns:
-        Dict with success status, new path, and tables in the new datastore
+        Dict with success status and tables in the new datastore
     """
     try:
         from mcp_server_pixeltable_stio.core.config import set_datastore_path
+        import pixeltable as pxt
         import os
 
         # Expand the path
@@ -1955,60 +1950,28 @@ def pixeltable_set_datastore(path: str, switch_now: bool = True) -> Dict[str, An
         # Create directory if it doesn't exist
         if not os.path.exists(expanded_path):
             os.makedirs(expanded_path, exist_ok=True)
-            logger.info(f"Created new datastore directory: {expanded_path}")
 
         # Update config file
-        if not set_datastore_path(expanded_path):
-            return {
-                "success": False,
-                "error": "Failed to update configuration file"
-            }
+        set_datastore_path(expanded_path)
 
-        if switch_now:
-            import pixeltable as pxt
+        # Set environment variable
+        os.environ['PIXELTABLE_HOME'] = expanded_path
 
-            # Update environment variable
-            os.environ['PIXELTABLE_HOME'] = expanded_path
-            logger.info(f"Set PIXELTABLE_HOME to: {expanded_path}")
+        # Reinitialize Pixeltable
+        pxt.init()
 
-            # Reinitialize Pixeltable with new path
-            try:
-                pxt.init()
-                logger.info(f"Reinitialized Pixeltable with datastore: {expanded_path}")
-            except Exception as init_error:
-                logger.error(f"Failed to reinitialize Pixeltable: {init_error}")
-                return {
-                    "success": False,
-                    "error": f"Failed to reinitialize Pixeltable: {str(init_error)}"
-                }
+        # Get tables in the new datastore
+        tables = pxt.list_tables()
 
-            # Get list of tables in new datastore
-            try:
-                tables = pxt.list_tables()
-                logger.info(f"Found {len(tables)} tables in new datastore")
-            except Exception as list_error:
-                logger.warning(f"Could not list tables: {list_error}")
-                tables = []
-
-            return {
-                "success": True,
-                "message": f"Switched to datastore: {expanded_path}",
-                "path": expanded_path,
-                "tables": tables,
-                "table_count": len(tables),
-                "switched": True
-            }
-        else:
-            return {
-                "success": True,
-                "message": f"Datastore path updated to: {expanded_path}",
-                "path": expanded_path,
-                "note": "Changes will take effect on next MCP restart",
-                "switched": False
-            }
+        return {
+            "success": True,
+            "message": f"Switched to datastore: {expanded_path}",
+            "path": expanded_path,
+            "tables": tables,
+            "table_count": len(tables)
+        }
 
     except Exception as e:
-        logger.error(f"Error setting datastore: {e}")
         return {
             "success": False,
             "error": str(e)
