@@ -1,5 +1,6 @@
 """UI Server management for Pixeltable visualization."""
 
+import sys
 import subprocess
 import logging
 import time
@@ -64,7 +65,7 @@ def start_visualization_server(port: int = 7777) -> Dict[str, Any]:
         logger.info(f"Starting visualization server on port {port}...")
         
         _ui_server_process = subprocess.Popen(
-            ["uvicorn", "mcp_server_pixeltable_stio.visualization.api.main:app",
+            [sys.executable, "-m", "uvicorn", "mcp_server_pixeltable_stio.visualization.api.main:app",
              "--host", "0.0.0.0", "--port", str(port)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
