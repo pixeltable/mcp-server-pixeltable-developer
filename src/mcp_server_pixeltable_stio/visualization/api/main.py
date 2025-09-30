@@ -7,9 +7,9 @@ from typing import Dict, Any, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import pixeltable as pxt
 
-from mcp_server_pixeltable_stio.core.repl_session import get_repl_instance
+from mcp_server_pixeltable_stio.visualization.executor import get_executor_manager
+from mcp_server_pixeltable_stio.visualization.worker import get_tables, get_table_info
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Pixeltable Visualization Server")
 
-# Get REPL instance for executing Pixeltable operations
-repl = get_repl_instance()
+# Get executor manager for running Pixeltable operations in isolated processes
+executor = get_executor_manager()
 
 
 @app.get("/api/health")
@@ -31,58 +31,23 @@ async def health():
 async def list_tables():
     """List all Pixeltable tables."""
     try:
-        result = repl.execute_python("import pixeltable as pxt; pxt.list_tables()")
-
-        if result.get("success"):
-            tables = result.get("output", [])
-            return {"success": True, "tables": tables}
-        else:
-            return {"success": False, "error": result.get("error", "Unknown error")}
+        tables = await executor.run(get_tables)
+        return {"success": True, "tables": tables}
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
         return {"success": False, "error": str(e)}
 
 
 @app.get("/api/table/{table_path:path}")
-async def get_table_info(table_path: str):
+async def get_table_info_endpoint(table_path: str):
     """Get detailed information about a table."""
     try:
-        code = f"""
-import pixeltable as pxt
-import json
+        table_info = await executor.run(get_table_info, table_path)
 
-table = pxt.get_table('{table_path}')
-schema = {{}}
+        if 'error' in table_info:
+            return {"success": False, "error": table_info['error']}
 
-for col_name, col_type in table._schema.items():
-    schema[col_name] = {{
-        'type': str(col_type),
-        'computed': hasattr(table, '_computed_columns') and col_name in table._computed_columns
-    }}
-
-result = {{
-    'name': '{table_path}',
-    'schema': schema,
-    'row_count': table.count()
-}}
-
-print(json.dumps(result))
-"""
-
-        result = repl.execute_python(code)
-
-        if result.get("success"):
-            import json
-            output = result.get("output", "")
-            # Parse JSON from output
-            try:
-                table_info = json.loads(output.strip())
-                return {"success": True, "table": table_info}
-            except json.JSONDecodeError:
-                return {"success": True, "raw_output": output}
-        else:
-            return {"success": False, "error": result.get("error", "Unknown error")}
-
+        return {"success": True, "table": table_info}
     except Exception as e:
         logger.error(f"Error getting table info: {e}")
         return {"success": False, "error": str(e)}
@@ -96,14 +61,11 @@ async def pipeline_websocket(websocket: WebSocket):
 
     try:
         # Send initial table list
-        tables_result = repl.execute_python("import pixeltable as pxt; pxt.list_tables()")
-
-        if tables_result.get("success"):
-            tables = tables_result.get("output", [])
-            await websocket.send_json({
-                "type": "tables",
-                "data": tables
-            })
+        tables = await executor.run(get_tables)
+        await websocket.send_json({
+            "type": "tables",
+            "data": tables
+        })
 
         # Keep connection alive and handle incoming messages
         while True:
@@ -112,46 +74,17 @@ async def pipeline_websocket(websocket: WebSocket):
             if data.get("type") == "get_table":
                 table_path = data.get("table_path")
 
-                code = f"""
-import pixeltable as pxt
-import json
+                table_info = await executor.run(get_table_info, table_path)
 
-table = pxt.get_table('{table_path}')
-schema = {{}}
-
-for col_name, col_type in table._schema.items():
-    schema[col_name] = {{
-        'type': str(col_type)
-    }}
-
-result = {{
-    'name': '{table_path}',
-    'schema': schema,
-    'row_count': table.count()
-}}
-
-print(json.dumps(result))
-"""
-
-                result = repl.execute_python(code)
-
-                if result.get("success"):
-                    import json
-                    try:
-                        table_info = json.loads(result.get("output", "{}").strip())
-                        await websocket.send_json({
-                            "type": "table_info",
-                            "data": table_info
-                        })
-                    except json.JSONDecodeError:
-                        await websocket.send_json({
-                            "type": "error",
-                            "error": "Failed to parse table info"
-                        })
-                else:
+                if 'error' in table_info:
                     await websocket.send_json({
                         "type": "error",
-                        "error": result.get("error", "Unknown error")
+                        "error": table_info['error']
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "table_info",
+                        "data": table_info
                     })
 
     except WebSocketDisconnect:
