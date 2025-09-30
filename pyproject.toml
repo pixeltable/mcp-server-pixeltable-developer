@@ -28,6 +28,9 @@ dependencies = [
     "mcp[cli]>=1.0.0",
     "requests>=2.31.0",
     "toml>=0.10.2",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "websockets>=14.0",
 ]
 
 [project.optional-dependencies]
