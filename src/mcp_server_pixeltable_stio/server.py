@@ -79,6 +79,13 @@ from mcp_server_pixeltable_stio.core.repl_functions import (
     get_session_summary
 )
 
+# Import UI server functions
+from mcp_server_pixeltable_stio.core.ui_server import (
+    start_visualization_server,
+    stop_visualization_server,
+    get_visualization_server_status
+)
+
 # Import prompt helper
 from mcp_server_pixeltable_stio.prompt import PIXELTABLE_USAGE_PROMPT
 
@@ -177,7 +184,12 @@ def main():
     mcp.tool()(introspect_function)
     mcp.tool()(list_available_functions)
     mcp.tool()(install_package)
-    
+
+    # Register UI server functions
+    mcp.tool()(start_visualization_server)
+    mcp.tool()(stop_visualization_server)
+    mcp.tool()(get_visualization_server_status)
+
     # Register bug logging functions
     mcp.tool()(log_bug)
     mcp.tool()(log_missing_feature)
