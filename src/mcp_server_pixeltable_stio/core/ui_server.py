@@ -12,7 +12,7 @@ _ui_server_process: Optional[subprocess.Popen] = None
 def ensure_ui_dependencies() -> Dict[str, Any]:
     """Ensure UI dependencies are installed and built."""
     try:
-        ui_dir = Path(__file__).parent.parent / "server" / "ui"
+        ui_dir = Path(__file__).parent.parent / "visualization" / "ui"
         dist_dir = ui_dir / "dist"
         
         if dist_dir.exists() and (dist_dir / "index.html").exists():
@@ -64,7 +64,7 @@ def start_visualization_server(port: int = 7777) -> Dict[str, Any]:
         logger.info(f"Starting visualization server on port {port}...")
         
         _ui_server_process = subprocess.Popen(
-            ["uvicorn", "mcp_server_pixeltable_stio.server.api.main:app",
+            ["uvicorn", "mcp_server_pixeltable_stio.visualization.api.main:app",
              "--host", "0.0.0.0", "--port", str(port)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
