@@ -203,7 +203,7 @@ def main():
 
     # Register canvas display tool
     @mcp.tool()
-    def display_in_browser(content_type: str, data: Any) -> Dict[str, Any]:
+    def display_in_browser(content_type: str, data: Any, title: str = None) -> Dict[str, Any]:
         """Send content to browser canvas for display.
 
         Args:
@@ -213,6 +213,7 @@ def main():
                 - For 'text': plain text string
                 - For 'html': HTML string
                 - For 'table': list of dictionaries (rows)
+            title: Optional title to display above the content
 
         Returns:
             Success status
@@ -220,13 +221,18 @@ def main():
         Example:
             display_in_browser('image', 'data:image/png;base64,...')
             display_in_browser('text', 'Hello from Claude!')
-            display_in_browser('table', [{'name': 'Alice', 'age': 30}])
+            display_in_browser('table', [{'name': 'Alice', 'age': 30}], title='User Data')
+            display_in_browser('mermaid', 'graph TD...', title='Schema DAG')
         """
         try:
-            broadcast_to_canvas({
+            message = {
                 'content_type': content_type,
                 'data': data
-            })
+            }
+            if title:
+                message['title'] = title
+
+            broadcast_to_canvas(message)
             return {"success": True, "message": f"Displayed {content_type} in browser"}
         except Exception as e:
             return {"success": False, "error": str(e)}

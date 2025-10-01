@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pixeltable Canvas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        // Initialize Mermaid with dark theme
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            themeVariables: {
+                darkMode: true,
+                background: '#1a1a1a',
+                primaryColor: '#4ade80',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#333',
+                lineColor: '#666',
+                secondaryColor: '#60a5fa',
+                tertiaryColor: '#a78bfa'
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+            margin: 0;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #2a2a2a;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #canvas {
+            margin-top: 60px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .item {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+        }
+        .item table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .item th, .item td {
+            padding: 12px;
+            border: 1px solid #444;
+            text-align: left;
+        }
+        .item th {
+            background: #333;
+            font-weight: 600;
+        }
+        .item pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+        h1 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .image-grid img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .image-grid img:hover {
+            transform: scale(1.05);
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .comparison-item {
+            text-align: center;
+        }
+        .comparison-item h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #888;
+            font-size: 14px;
+        }
+        video, audio {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pixeltable Canvas</h1>
+    <div id="status">Connecting...</div>
+    <div id="canvas"></div>
+
+    <script>
+        // Connect to MCP canvas stream
+        // CHANGE THIS URL if your MCP is running on a different port
+        const eventSource = new EventSource('http://localhost:8000/canvas/stream');
+        const canvas = document.getElementById('canvas');
+        const status = document.getElementById('status');
+
+        eventSource.onopen = () => {
+            status.textContent = 'Connected ✓';
+            status.style.color = '#4ade80';
+        };
+
+        eventSource.onerror = () => {
+            status.textContent = 'Disconnected ✗';
+            status.style.color = '#f87171';
+        };
+
+        eventSource.onmessage = (event) => {
+            // Mark as connected when we receive any message
+            if (status.textContent !== 'Connected ✓') {
+                status.textContent = 'Connected ✓';
+                status.style.color = '#4ade80';
+            }
+
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'connected') {
+                console.log('Canvas connected to MCP');
+                return;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'item';
+
+            // Add title if provided
+            if (message.title) {
+                const title = document.createElement('h3');
+                title.textContent = message.title;
+                title.style.margin = '0 0 15px 0';
+                title.style.textAlign = 'center';
+                title.style.color = '#fff';
+                title.style.fontSize = '18px';
+                title.style.fontWeight = '600';
+                title.style.borderBottom = '2px solid #444';
+                title.style.paddingBottom = '10px';
+                item.appendChild(title);
+            }
+
+            switch(message.content_type) {
+                case 'image':
+                    const img = document.createElement('img');
+                    img.src = message.data;
+                    img.onerror = () => {
+                        // If image fails to load, show error
+                        item.innerHTML = `<p style="color: #f87171;">Failed to load image: ${message.data}</p>`;
+                    };
+                    item.appendChild(img);
+                    break;
+
+                case 'text':
+                    const text = document.createElement('p');
+                    text.textContent = message.data;
+                    text.style.margin = '0';
+                    text.style.fontSize = '16px';
+                    text.style.lineHeight = '1.6';
+                    item.appendChild(text);
+                    break;
+
+                case 'html':
+                    item.innerHTML = message.data;
+                    break;
+
+                case 'table':
+                    const table = document.createElement('table');
+                    // Assume data is array of objects
+                    if (Array.isArray(message.data) && message.data.length > 0) {
+                        const headers = Object.keys(message.data[0]);
+                        const thead = table.createTHead();
+                        const headerRow = thead.insertRow();
+                        headers.forEach(h => {
+                            const th = document.createElement('th');
+                            th.textContent = h;
+                            headerRow.appendChild(th);
+                        });
+                        const tbody = table.createTBody();
+                        message.data.forEach(row => {
+                            const tr = tbody.insertRow();
+                            headers.forEach(h => {
+                                const td = tr.insertCell();
+                                td.textContent = row[h];
+                            });
+                        });
+                        item.appendChild(table);
+                    } else {
+                        item.innerHTML = '<p>Invalid table data</p>';
+                    }
+                    break;
+
+                case 'json':
+                    const pre = document.createElement('pre');
+                    pre.textContent = JSON.stringify(message.data, null, 2);
+                    item.appendChild(pre);
+                    break;
+
+                case 'chart':
+                    // Chart.js visualization
+                    // data format: { type: 'bar'|'line'|'pie'|'scatter', chartData: {...}, options: {...} }
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'chart-container';
+                    const chartCanvas = document.createElement('canvas');
+                    chartContainer.appendChild(chartCanvas);
+                    item.appendChild(chartContainer);
+
+                    new Chart(chartCanvas, {
+                        type: message.data.type || 'bar',
+                        data: message.data.chartData,
+                        options: {
+                            ...message.data.options,
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: { color: '#fff' }
+                                }
+                            },
+                            scales: message.data.type !== 'pie' ? {
+                                x: { ticks: { color: '#888' }, grid: { color: '#333' } },
+                                y: { ticks: { color: '#888' }, grid: { color: '#333' } }
+                            } : undefined
+                        }
+                    });
+                    break;
+
+                case 'image_grid':
+                    // Grid of images
+                    // data format: [{ url: '...', caption: '...' }, ...]
+                    const grid = document.createElement('div');
+                    grid.className = 'image-grid';
+                    message.data.forEach(imgData => {
+                        const gridImg = document.createElement('img');
+                        gridImg.src = imgData.url || imgData;
+                        if (imgData.caption) {
+                            gridImg.title = imgData.caption;
+                        }
+                        gridImg.onclick = () => {
+                            // Show full size on click
+                            const fullView = window.open('', '_blank');
+                            fullView.document.write(`<img src="${gridImg.src}" style="max-width:100%; height:auto;">`);
+                        };
+                        grid.appendChild(gridImg);
+                    });
+                    item.appendChild(grid);
+                    break;
+
+                case 'comparison':
+                    // Side-by-side comparison
+                    // data format: { left: { type: 'image'|'text', data: '...' }, right: {...}, leftLabel: '...', rightLabel: '...' }
+                    const comparison = document.createElement('div');
+                    comparison.className = 'comparison';
+
+                    ['left', 'right'].forEach(side => {
+                        const compItem = document.createElement('div');
+                        compItem.className = 'comparison-item';
+
+                        const label = document.createElement('h3');
+                        label.textContent = message.data[`${side}Label`] || side.toUpperCase();
+                        compItem.appendChild(label);
+
+                        const content = message.data[side];
+                        if (content.type === 'image') {
+                            const compImg = document.createElement('img');
+                            compImg.src = content.data;
+                            compItem.appendChild(compImg);
+                        } else if (content.type === 'text') {
+                            const compText = document.createElement('p');
+                            compText.textContent = content.data;
+                            compItem.appendChild(compText);
+                        }
+
+                        comparison.appendChild(compItem);
+                    });
+                    item.appendChild(comparison);
+                    break;
+
+                case 'video':
+                    // Video player
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.src = message.data;
+                    item.appendChild(video);
+                    break;
+
+                case 'audio':
+                    // Audio player
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = message.data;
+                    item.appendChild(audio);
+                    break;
+
+                case 'mermaid':
+                    // Mermaid diagram
+                    // data format: string with mermaid syntax
+                    const mermaidDiv = document.createElement('div');
+                    mermaidDiv.className = 'mermaid';
+                    mermaidDiv.textContent = message.data;
+                    item.appendChild(mermaidDiv);
+
+                    // Render the mermaid diagram
+                    mermaid.run({
+                        nodes: [mermaidDiv]
+                    });
+                    break;
+
+                default:
+                    // Fallback: display as JSON
+                    const fallback = document.createElement('pre');
+                    fallback.textContent = JSON.stringify(message, null, 2);
+                    item.appendChild(fallback);
+            }
+
+            // Add timestamp
+            const timestamp = document.createElement('div');
+            timestamp.style.fontSize = '12px';
+            timestamp.style.color = '#888';
+            timestamp.style.marginTop = '10px';
+            timestamp.textContent = new Date().toLocaleTimeString();
+            item.appendChild(timestamp);
+
+            // Insert at top (most recent first)
+            canvas.insertBefore(item, canvas.firstChild);
+        };
+
+        // Log connection info
+        console.log('Pixeltable Canvas initialized');
+        console.log('Connecting to: http://localhost:8000/canvas/stream');
+        console.log('Waiting for messages from Claude...');
+    </script>
+</body>
+</html>
