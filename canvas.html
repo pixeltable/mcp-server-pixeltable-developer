@@ -218,7 +218,46 @@
                             const tr = tbody.insertRow();
                             headers.forEach(h => {
                                 const td = tr.insertCell();
-                                td.textContent = row[h];
+                                const value = row[h];
+
+                                // Check if value is a URL (starts with http:// or file://)
+                                if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('file://'))) {
+                                    // Check if it's an audio file
+                                    if (value.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+                                        const audioEl = document.createElement('audio');
+                                        audioEl.controls = true;
+                                        audioEl.src = value;
+                                        audioEl.style.width = '100%';
+                                        td.appendChild(audioEl);
+                                    }
+                                    // Check if it's an image file
+                                    else if (value.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                                        const imgEl = document.createElement('img');
+                                        imgEl.src = value;
+                                        imgEl.style.maxWidth = '200px';
+                                        imgEl.style.height = 'auto';
+                                        td.appendChild(imgEl);
+                                    }
+                                    // Check if it's a video file
+                                    else if (value.match(/\.(mp4|webm|ogg)$/i)) {
+                                        const videoEl = document.createElement('video');
+                                        videoEl.controls = true;
+                                        videoEl.src = value;
+                                        videoEl.style.maxWidth = '300px';
+                                        td.appendChild(videoEl);
+                                    }
+                                    else {
+                                        // Just a regular URL, show as link
+                                        const link = document.createElement('a');
+                                        link.href = value;
+                                        link.textContent = value;
+                                        link.target = '_blank';
+                                        td.appendChild(link);
+                                    }
+                                } else {
+                                    // Regular text value
+                                    td.textContent = value;
+                                }
                             });
                         });
                         item.appendChild(table);
