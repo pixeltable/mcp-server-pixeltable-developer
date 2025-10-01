@@ -86,6 +86,12 @@ from mcp_server_pixeltable_stio.core.ui_server import (
     get_visualization_server_status
 )
 
+# Import canvas server functions
+from mcp_server_pixeltable_stio.core.canvas_server import (
+    run_canvas_server_thread,
+    broadcast_to_canvas
+)
+
 # Import prompt helper
 from mcp_server_pixeltable_stio.prompt import PIXELTABLE_USAGE_PROMPT
 
@@ -109,6 +115,10 @@ def main():
     try:
         # Disable Pixeltable console output to prevent JSON parsing issues
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
+
+        # Start canvas server in background thread
+        run_canvas_server_thread(port=8000)
+        logger.info("Canvas server started on http://localhost:8000/canvas")
 
         logger.info("Pixeltable MCP server ready")
 
@@ -189,6 +199,36 @@ def main():
     mcp.tool()(start_visualization_server)
     mcp.tool()(stop_visualization_server)
     mcp.tool()(get_visualization_server_status)
+
+    # Register canvas display tool
+    @mcp.tool()
+    def display_in_browser(content_type: str, data: Any) -> Dict[str, Any]:
+        """Send content to browser canvas for display.
+
+        Args:
+            content_type: Type of content ('image', 'text', 'html', 'table', etc.)
+            data: The content data to display
+                - For 'image': base64 data URL or image URL
+                - For 'text': plain text string
+                - For 'html': HTML string
+                - For 'table': list of dictionaries (rows)
+
+        Returns:
+            Success status
+
+        Example:
+            display_in_browser('image', 'data:image/png;base64,...')
+            display_in_browser('text', 'Hello from Claude!')
+            display_in_browser('table', [{'name': 'Alice', 'age': 30}])
+        """
+        try:
+            broadcast_to_canvas({
+                'content_type': content_type,
+                'data': data
+            })
+            return {"success": True, "message": f"Displayed {content_type} in browser"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     # Register bug logging functions
     mcp.tool()(log_bug)
