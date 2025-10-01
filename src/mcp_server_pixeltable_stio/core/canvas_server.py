@@ -94,14 +94,25 @@ def create_canvas_app() -> FastAPI:
     async def serve_canvas_page():
         """Serve canvas HTML page from file."""
         import os
+        import sys
 
-        # Try to find canvas.html in the package directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Go up to the package root
-        package_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-        canvas_path = os.path.join(package_root, 'canvas.html')
+        # Try multiple locations for canvas.html
+        possible_paths = [
+            # Editable install from repo root
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))), 'canvas.html'),
+            # Installed package data
+            os.path.join(sys.prefix, 'share', 'mcp-server-pixeltable-developer', 'canvas.html'),
+            # Development location
+            os.path.join(os.getcwd(), 'canvas.html'),
+        ]
 
-        if os.path.exists(canvas_path):
+        canvas_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                canvas_path = path
+                break
+
+        if canvas_path:
             with open(canvas_path, 'r') as f:
                 html_content = f.read()
             # Replace the SSE URL to use relative path
@@ -115,7 +126,8 @@ def create_canvas_app() -> FastAPI:
             return """
             <html><body>
             <h1>Canvas not found</h1>
-            <p>Could not find canvas.html at: """ + canvas_path + """</p>
+            <p>Searched paths:</p>
+            <ul>""" + ''.join(f'<li>{p}</li>' for p in possible_paths) + """</ul>
             </body></html>
             """
 

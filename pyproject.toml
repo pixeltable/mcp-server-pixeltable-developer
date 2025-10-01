@@ -68,9 +68,13 @@ mcp-server-pixeltable-developer = "mcp_server_pixeltable_stio.__main__:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_server_pixeltable_stio"]
 
+[tool.hatch.build.targets.wheel.shared-data]
+"canvas.html" = "share/mcp-server-pixeltable-developer/canvas.html"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
     "/README.md",
     "/LICENSE",
+    "/canvas.html",
 ]
