@@ -92,98 +92,32 @@ def create_canvas_app() -> FastAPI:
 
     @app.get("/canvas", response_class=HTMLResponse)
     async def serve_canvas_page():
-        """Serve simple canvas HTML page."""
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Pixeltable Canvas</title>
-            <style>
-                body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
-                #canvas { margin-top: 20px; }
-                .item { margin: 20px 0; padding: 20px; background: #2a2a2a; border-radius: 8px; }
-                img { max-width: 100%; height: auto; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { padding: 8px; border: 1px solid #444; text-align: left; }
-                th { background: #333; }
-            </style>
-        </head>
-        <body>
-            <h1>Pixeltable Canvas</h1>
-            <div id="status">Connecting...</div>
-            <div id="canvas"></div>
-            <script>
-                const eventSource = new EventSource('/canvas/stream');
-                const canvas = document.getElementById('canvas');
-                const status = document.getElementById('status');
+        """Serve canvas HTML page from file."""
+        import os
 
-                eventSource.onopen = () => {
-                    status.textContent = 'Connected ✓';
-                    status.style.color = '#4ade80';
-                };
+        # Try to find canvas.html in the package directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up to the package root
+        package_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+        canvas_path = os.path.join(package_root, 'canvas.html')
 
-                eventSource.onerror = () => {
-                    status.textContent = 'Disconnected ✗';
-                    status.style.color = '#f87171';
-                };
-
-                eventSource.onmessage = (event) => {
-                    const message = JSON.parse(event.data);
-
-                    if (message.type === 'connected') return;
-
-                    const item = document.createElement('div');
-                    item.className = 'item';
-
-                    switch(message.content_type) {
-                        case 'image':
-                            const img = document.createElement('img');
-                            img.src = message.data;
-                            item.appendChild(img);
-                            break;
-
-                        case 'text':
-                            item.textContent = message.data;
-                            break;
-
-                        case 'html':
-                            item.innerHTML = message.data;
-                            break;
-
-                        case 'table':
-                            const table = document.createElement('table');
-                            // Assume data is array of objects
-                            if (message.data.length > 0) {
-                                const headers = Object.keys(message.data[0]);
-                                const thead = table.createTHead();
-                                const headerRow = thead.insertRow();
-                                headers.forEach(h => {
-                                    const th = document.createElement('th');
-                                    th.textContent = h;
-                                    headerRow.appendChild(th);
-                                });
-                                const tbody = table.createTBody();
-                                message.data.forEach(row => {
-                                    const tr = tbody.insertRow();
-                                    headers.forEach(h => {
-                                        const td = tr.insertCell();
-                                        td.textContent = row[h];
-                                    });
-                                });
-                            }
-                            item.appendChild(table);
-                            break;
-
-                        default:
-                            item.textContent = JSON.stringify(message, null, 2);
-                    }
-
-                    canvas.insertBefore(item, canvas.firstChild);
-                };
-            </script>
-        </body>
-        </html>
-        """
+        if os.path.exists(canvas_path):
+            with open(canvas_path, 'r') as f:
+                html_content = f.read()
+            # Replace the SSE URL to use relative path
+            html_content = html_content.replace(
+                "const eventSource = new EventSource('http://localhost:8000/canvas/stream');",
+                "const eventSource = new EventSource('/canvas/stream');"
+            )
+            return html_content
+        else:
+            # Fallback to basic HTML if file not found
+            return """
+            <html><body>
+            <h1>Canvas not found</h1>
+            <p>Could not find canvas.html at: """ + canvas_path + """</p>
+            </body></html>
+            """
 
     return app
 
