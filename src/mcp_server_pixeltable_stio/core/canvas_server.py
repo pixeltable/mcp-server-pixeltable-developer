@@ -12,7 +12,7 @@ from queue import Queue
 import threading
 
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 import uvicorn
 
 logger = logging.getLogger(__name__)
@@ -130,6 +130,20 @@ def create_canvas_app() -> FastAPI:
             <ul>""" + ''.join(f'<li>{p}</li>' for p in possible_paths) + """</ul>
             </body></html>
             """
+
+    @app.get("/media/{file_path:path}")
+    async def serve_media(file_path: str):
+        """Serve media files from local filesystem via HTTP."""
+        import os
+
+        # Make path absolute if needed
+        if not file_path.startswith('/'):
+            file_path = '/' + file_path
+
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        else:
+            return {"error": "File not found", "path": file_path}
 
     return app
 

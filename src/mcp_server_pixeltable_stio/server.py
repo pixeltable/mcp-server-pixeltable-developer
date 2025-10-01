@@ -80,13 +80,6 @@ from mcp_server_pixeltable_stio.core.repl_functions import (
     get_session_summary
 )
 
-# Import UI server functions
-from mcp_server_pixeltable_stio.core.ui_server import (
-    start_visualization_server,
-    stop_visualization_server,
-    get_visualization_server_status
-)
-
 # Import canvas server functions
 from mcp_server_pixeltable_stio.core.canvas_server import (
     run_canvas_server_thread,
@@ -118,8 +111,8 @@ def main():
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
 
         # Start canvas server in background thread
-        run_canvas_server_thread(port=8000)
-        logger.info("Canvas server started on http://localhost:8000/canvas")
+        run_canvas_server_thread(port=7777)
+        logger.info("Canvas server started on http://localhost:7777/canvas")
 
         logger.info("Pixeltable MCP server ready")
 
@@ -196,11 +189,6 @@ def main():
     mcp.tool()(list_available_functions)
     mcp.tool()(install_package)
 
-    # Register UI server functions
-    mcp.tool()(start_visualization_server)
-    mcp.tool()(stop_visualization_server)
-    mcp.tool()(get_visualization_server_status)
-
     # Register canvas display tool
     @mcp.tool()
     def display_in_browser(content_type: str, data: Any, title: str = None) -> Dict[str, Any]:
@@ -225,9 +213,25 @@ def main():
             display_in_browser('mermaid', 'graph TD...', title='Schema DAG')
         """
         try:
+            # Convert file:// URLs to /media/ URLs for serving
+            processed_data = data
+            if isinstance(data, str) and data.startswith('file://'):
+                # Convert file:///path to http://localhost:7777/media/path
+                file_path = data.replace('file://', '')
+                processed_data = f'http://localhost:7777/media{file_path}'
+            elif isinstance(data, list):
+                # Handle arrays of data (like image grids)
+                processed_data = []
+                for item in data:
+                    if isinstance(item, dict) and 'url' in item:
+                        if item['url'].startswith('file://'):
+                            file_path = item['url'].replace('file://', '')
+                            item['url'] = f'http://localhost:7777/media{file_path}'
+                    processed_data.append(item)
+
             message = {
                 'content_type': content_type,
-                'data': data
+                'data': processed_data
             }
             if title:
                 message['title'] = title
