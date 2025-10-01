@@ -150,6 +150,27 @@ def create_canvas_app() -> FastAPI:
 
 def run_canvas_server_thread(port: int = 8000):
     """Run canvas server in a separate thread."""
+    import subprocess
+    import signal
+
+    # Kill any existing processes on this port
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True,
+            text=True
+        )
+        if result.stdout.strip():
+            pids = result.stdout.strip().split('\n')
+            for pid in pids:
+                try:
+                    logger.info(f"Killing existing process on port {port}: PID {pid}")
+                    subprocess.run(["kill", "-9", pid], check=False)
+                except Exception as e:
+                    logger.warning(f"Failed to kill process {pid}: {e}")
+    except Exception as e:
+        logger.warning(f"Failed to check for existing processes on port {port}: {e}")
+
     def run_server():
         app = create_canvas_app()
         uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
