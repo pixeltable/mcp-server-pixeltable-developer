@@ -1,129 +1,205 @@
 #!/usr/bin/env python3
 """
-Quick script to list all registered tools in the Pixeltable MCP server.
+Quick script to list all registered tools, resources, and prompts in the Pixeltable MCP server.
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from mcp_server_pixeltable_stio.server import main
-from mcp.server.fastmcp import FastMCP
+# ---------------------------------------------------------------------------
+# Import tool functions from their canonical modules
+# ---------------------------------------------------------------------------
 
-# Import all the tool functions to get their names and docstrings
-from mcp_server_pixeltable_stio.core.pixeltable_functions import *
-from mcp_server_pixeltable_stio.core.repl_functions import *
+# Table management (tables.py)
+from mcp_server_pixeltable_stio.core.tables import (
+    pixeltable_create_table,
+    pixeltable_drop_table,
+    pixeltable_create_view,
+    pixeltable_create_snapshot,
+    pixeltable_create_replica,
+    pixeltable_query_table,
+    pixeltable_insert_data,
+    pixeltable_add_computed_column,
+    pixeltable_query,
+)
 
-def list_tools():
-    """List all available tools in the Pixeltable MCP server."""
-    
-    # Create a temporary MCP instance to access registered tools
-    mcp = FastMCP(name="pixeltable-developer")
-    
-    # Register all tools (same as in server.py)
+# Directory management (directories.py)
+from mcp_server_pixeltable_stio.core.directories import (
+    pixeltable_create_dir,
+    pixeltable_drop_dir,
+    pixeltable_move,
+)
+
+# Dependencies (dependencies.py)
+from mcp_server_pixeltable_stio.core.dependencies import (
+    pixeltable_check_dependencies,
+    pixeltable_install_dependency,
+)
+
+# UDF / type / tools / MCP (udf.py)
+from mcp_server_pixeltable_stio.core.udf import (
+    pixeltable_create_udf,
+    pixeltable_create_array,
+    pixeltable_create_tools,
+    pixeltable_connect_mcp,
+    pixeltable_create_type,
+)
+
+# Helpers (helpers.py)
+from mcp_server_pixeltable_stio.core.helpers import (
+    pixeltable_configure_logging,
+    pixeltable_set_datastore,
+    pixeltable_search_docs,
+)
+
+# REPL & bug logging
+from mcp_server_pixeltable_stio.core.repl_functions import (
+    execute_python,
+    introspect_function,
+    list_available_functions,
+    install_package,
+    log_bug,
+    log_missing_feature,
+    log_success,
+    generate_bug_report,
+    get_session_summary,
+)
+
+# Resource URIs registered in server.py
+RESOURCES = [
+    ("pixeltable://tables", "List all Pixeltable tables with count"),
+    ("pixeltable://tables/{path}/schema", "Get the schema of a Pixeltable table"),
+    ("pixeltable://tables/{path}", "Get info about a specific table, view, or snapshot"),
+    ("pixeltable://directories", "List all Pixeltable directories"),
+    ("pixeltable://ls", "List contents of the Pixeltable root directory"),
+    ("pixeltable://ls/{path}", "List contents of a Pixeltable directory"),
+    ("pixeltable://version", "Get Pixeltable version information"),
+    ("pixeltable://config/datastore", "Get the current datastore configuration"),
+    ("pixeltable://types", "Get available Pixeltable data types"),
+    ("pixeltable://functions", "List all registered Pixeltable functions"),
+    ("pixeltable://tools", "List all available MCP tools with descriptions"),
+    ("pixeltable://help", "Get comprehensive Pixeltable help and workflow guidance"),
+    ("pixeltable://diagnostics", "Get system diagnostics for Pixeltable and dependencies"),
+]
+
+# Prompt names registered in server.py
+PROMPTS = [
+    ("pixeltable_usage_guide", "Comprehensive guide for multimodal AI data workflows"),
+    ("getting_started", "Step-by-step guide for first-time users"),
+    ("computer_vision_pipeline", "Build a CV pipeline with YOLOX / GPT-4 Vision"),
+    ("rag_pipeline", "Build a RAG pipeline with chunking, embeddings, search"),
+    ("video_analysis_pipeline", "Build a video analysis pipeline with frame extraction"),
+    ("audio_processing_pipeline", "Build an audio processing pipeline with Whisper"),
+]
+
+
+def list_all():
+    """List all available tools, resources, and prompts."""
+
     tools = [
-        # Core Pixeltable functions
-        pixeltable_init,
+        # Core table management
         pixeltable_create_table,
-        pixeltable_get_table,
-        pixeltable_list_tables,
         pixeltable_drop_table,
         pixeltable_create_view,
         pixeltable_create_snapshot,
+        # Directory management
         pixeltable_create_dir,
         pixeltable_drop_dir,
-        pixeltable_list_dirs,
-        pixeltable_ls,
         pixeltable_move,
-        pixeltable_list_functions,
+        # Configuration
         pixeltable_configure_logging,
-        pixeltable_get_types,
-        pixeltable_get_version,
+        # Data operations
         pixeltable_create_replica,
         pixeltable_query_table,
-        pixeltable_get_table_schema,
         pixeltable_insert_data,
         pixeltable_add_computed_column,
+        # Dependencies (unified)
         pixeltable_check_dependencies,
-        pixeltable_install_yolox,
-        pixeltable_install_openai,
-        pixeltable_install_huggingface,
-        pixeltable_install_all_dependencies,
-        pixeltable_smart_install,
-        pixeltable_auto_install_for_expression,
-        pixeltable_suggest_install_from_error,
-        pixeltable_system_diagnostics,
+        pixeltable_install_dependency,
+        # High-priority
         pixeltable_query,
         pixeltable_create_udf,
         pixeltable_create_array,
         pixeltable_create_tools,
         pixeltable_connect_mcp,
-        pixeltable_create_image_type,
-        pixeltable_create_video_type,
-        pixeltable_create_audio_type,
-        pixeltable_create_array_type,
-        pixeltable_create_json_type,
+        # Type helper (unified)
+        pixeltable_create_type,
+        # Datastore & docs
         pixeltable_set_datastore,
-        pixeltable_get_datastore,
-        # REPL functions
+        pixeltable_search_docs,
+        # REPL & debug
         execute_python,
         introspect_function,
         list_available_functions,
         install_package,
+        # Bug logging
         log_bug,
         log_missing_feature,
         log_success,
         generate_bug_report,
         get_session_summary,
     ]
-    
-    print("=== Pixeltable MCP Server Tools ===\n")
-    
+    # NOTE: display_in_browser is defined inline in server.py and not listed here
+
+    # ---- TOOLS ----
+    print("=" * 60)
+    print("  Pixeltable MCP Server — Registered Primitives")
+    print("=" * 60)
+
     categories = {
-        "Table Management": ["create_table", "get_table", "list_tables", "drop_table", "query_table", "get_table_schema"],
-        "Data Operations": ["insert_data", "add_computed_column", "create_view", "create_snapshot", "create_replica"],
-        "Directory Management": ["create_dir", "drop_dir", "list_dirs", "ls", "move"],
-        "Configuration": ["init", "set_datastore", "get_datastore", "configure_logging", "get_version"],
-        "AI/ML Integration": ["create_udf", "create_array", "create_tools", "connect_mcp", "query"],
-        "Data Types": ["create_image_type", "create_video_type", "create_audio_type", "create_array_type", "create_json_type"],
-        "Dependencies": ["check_dependencies", "install_yolox", "install_openai", "install_huggingface", "install_all_dependencies", "smart_install"],
-        "REPL & Debug": ["execute_python", "introspect_function", "list_available_functions", "log_bug", "log_missing_feature", "generate_bug_report"],
-        "Utilities": ["list_functions", "get_types", "system_diagnostics", "auto_install_for_expression", "suggest_install_from_error"],
+        "Table Management": ["create_table", "drop_table", "create_view", "create_snapshot"],
+        "Data Operations": ["query_table", "query", "insert_data", "add_computed_column", "create_replica"],
+        "Directory Management": ["create_dir", "drop_dir", "move"],
+        "Configuration": ["configure_logging", "set_datastore"],
+        "AI/ML Integration": ["create_udf", "create_array", "create_tools", "connect_mcp"],
+        "Dependencies": ["check_dependencies", "install_dependency"],
+        "Type Helper": ["create_type"],
+        "Documentation": ["search_docs"],
+        "REPL & Debug": ["execute_python", "introspect_function", "list_available_functions", "install_package"],
+        "Bug Logging": ["log_bug", "log_missing_feature", "log_success", "generate_bug_report", "get_session_summary"],
     }
-    
-    # Group tools by category
+
     categorized = {cat: [] for cat in categories}
     uncategorized = []
-    
+
     for tool in tools:
         name = tool.__name__
-        doc = tool.__doc__.split('\n')[0] if tool.__doc__ else "No description"
+        doc = (tool.__doc__ or "No description").strip().split('\n')[0]
         found = False
-        
         for cat, keywords in categories.items():
-            if any(kw in name for kw in keywords):
+            if any(name.endswith(kw) or name == kw or f"pixeltable_{kw}" == name for kw in keywords):
                 categorized[cat].append((name, doc))
                 found = True
                 break
-        
         if not found:
             uncategorized.append((name, doc))
-    
-    # Print categorized tools
+
+    print(f"\n--- TOOLS ({len(tools)} + 1 inline) ---\n")
     for category, tool_list in categorized.items():
         if tool_list:
-            print(f"\n{category}:")
-            print("-" * len(category))
-            for name, doc in sorted(tool_list):
-                print(f"  • {name}: {doc}")
-    
+            print(f"  {category}:")
+            for name, doc in tool_list:
+                print(f"    • {name}: {doc}")
     if uncategorized:
-        print(f"\nOther:")
-        print("-----")
-        for name, doc in sorted(uncategorized):
-            print(f"  • {name}: {doc}")
-    
-    print(f"\n\nTotal tools available: {len(tools)}")
+        print(f"  Other:")
+        for name, doc in uncategorized:
+            print(f"    • {name}: {doc}")
+
+    # ---- RESOURCES ----
+    print(f"\n--- RESOURCES ({len(RESOURCES)}) ---\n")
+    for uri, desc in RESOURCES:
+        print(f"  • {uri}: {desc}")
+
+    # ---- PROMPTS ----
+    print(f"\n--- PROMPTS ({len(PROMPTS)}) ---\n")
+    for name, desc in PROMPTS:
+        print(f"  • {name}: {desc}")
+
+    print(f"\n{'=' * 60}")
+    print(f"  Total: {len(tools) + 1} tools, {len(RESOURCES)} resources, {len(PROMPTS)} prompts")
+    print(f"{'=' * 60}")
+
 
 if __name__ == "__main__":
-    list_tools()
+    list_all()
