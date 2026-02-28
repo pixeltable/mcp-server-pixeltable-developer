@@ -367,11 +367,22 @@ def pixeltable_query_table(table_path: str, limit: Optional[int] = None) -> Dict
         df = table.select()
         if limit:
             df = df.limit(limit)
-        result_data = df.collect()
+        result_set = df.collect()
+
+        # ResultSet rows are dicts: {'col': value, ...}
+        rows_raw = [dict(row) for row in result_set]
+        col_names = list(rows_raw[0].keys()) if rows_raw else []
+
+        def _safe(v: Any) -> Any:
+            if isinstance(v, (str, int, float, bool, type(None))):
+                return v
+            return str(v)
+
         return {
             "success": True,
-            "data": serialize_result(result_data)["data"],
-            "row_count": len(result_data) if isinstance(result_data, list) else 1
+            "columns": col_names,
+            "data": [[_safe(row[c]) for c in col_names] for row in rows_raw],
+            "row_count": len(rows_raw),
         }
     except Exception as e:
         logger.error(f"Error querying table: {e}")
@@ -420,14 +431,40 @@ def pixeltable_query(
     try:
         ensure_pixeltable_available()
         table = pxt.get_table(table_path)
-        result = table.select(*columns) if columns else table.select()
+
+        # Resolve column name strings to actual column references
+        if columns:
+            col_refs = []
+            for col_name in columns:
+                if hasattr(table, col_name):
+                    col_refs.append(getattr(table, col_name))
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Column '{col_name}' not found in table '{table_path}'",
+                    }
+            result = table.select(*col_refs)
+        else:
+            result = table.select()
+
         if limit:
             result = result.limit(limit)
-        data = result.collect()
+        result_set = result.collect()
+
+        # ResultSet rows are dicts: {'col': value, ...}
+        rows_raw = [dict(row) for row in result_set]
+        col_names = list(rows_raw[0].keys()) if rows_raw else []
+
+        def _safe(v: Any) -> Any:
+            if isinstance(v, (str, int, float, bool, type(None))):
+                return v
+            return str(v)
+
         return {
             "success": True,
-            "data": serialize_result(data)["data"],
-            "row_count": len(data) if isinstance(data, list) else 1,
+            "columns": col_names,
+            "data": [[_safe(row[c]) for c in col_names] for row in rows_raw],
+            "row_count": len(rows_raw),
             "table_path": table_path,
             "query_info": {"columns": columns, "limit": limit}
         }
