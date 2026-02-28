@@ -275,11 +275,11 @@ def pixeltable_create_type(
                     'error': f"Unknown element type '{element_type}' for Array.",
                 }
             _, elem_obj = type_mapping[elem_key]
-            type_obj = pxt.Array(elem_obj)
+            resolved = pxt.Array[elem_obj]
             return {
                 'success': True,
                 'type': canonical_name,
-                'type_object': type_obj,
+                'type_repr': repr(resolved),
                 'element_type': element_type,
                 'description': f'Pixeltable Array[{element_type}] type',
             }
@@ -287,7 +287,7 @@ def pixeltable_create_type(
         return {
             'success': True,
             'type': canonical_name,
-            'type_object': type_obj,
+            'type_repr': repr(type_obj),
             'description': f'Pixeltable {canonical_name} type for schema definitions',
         }
 
