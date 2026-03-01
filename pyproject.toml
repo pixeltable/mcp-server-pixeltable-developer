@@ -24,13 +24,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pixeltable>=0.4.14",
+    "pixeltable>=0.5.19",
     "mcp[cli]>=1.0.0",
     "requests>=2.31.0",
     "toml>=0.10.2",
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
     "websockets>=14.0",
+    "uvloop>=0.19.0; sys_platform != 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -59,8 +60,8 @@ vision = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/goodlux/mcp-server-pixeltable-developer"
-"Bug Tracker" = "https://github.com/goodlux/mcp-server-pixeltable-developer/issues"
+"Homepage" = "https://github.com/pixeltable/mcp-server-pixeltable-developer"
+"Bug Tracker" = "https://github.com/pixeltable/mcp-server-pixeltable-developer/issues"
 
 [project.scripts]
 mcp-server-pixeltable-developer = "mcp_server_pixeltable_stio.__main__:main"

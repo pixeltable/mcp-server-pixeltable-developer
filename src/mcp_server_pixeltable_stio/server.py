@@ -8,8 +8,17 @@ using all three MCP primitives: Tools, Resources, and Prompts.
 import os
 import sys
 import json
+import asyncio
 import logging
 from typing import Dict, Any
+
+# Activate uvloop for better async performance (Pixeltable v0.5.19+ compatible)
+try:
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ImportError:
+    pass  # uvloop not installed — fall back to default asyncio loop
+
 from mcp.server.fastmcp import FastMCP
 
 # Import utilities
