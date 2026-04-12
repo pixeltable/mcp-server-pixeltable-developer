@@ -1,7 +1,5 @@
 # Pixeltable MCP Server (Developer Edition)
 
-> **⚠️ Experimental — do not use with important data.**
-
 Multimodal AI data infrastructure as an MCP server. **32 tools · 13 resources · 6 prompts** for table management, AI/ML pipelines, dependency management, an interactive REPL, and more.
 
 Uses **sync endpoints** + **uvloop** for best performance with Pixeltable ≥ 0.5.19.
@@ -25,6 +23,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
 claude mcp add pixeltable mcp-server-pixeltable-developer   # Claude Code
 ```
+
+If `uv` warns that `~/.local/bin` is not on your `PATH`, run `uv tool update-shell` (or add that directory to `PATH`) so `mcp-server-pixeltable-developer` is found. Check with `mcp-server-pixeltable-developer --version`.
 
 **From source:**
 
@@ -57,21 +57,76 @@ From source — use `"command": "uv"` with `"args": ["run", "--directory", "{rep
 
 <details><summary><strong>Cursor</strong></summary>
 
-`.cursor/mcp.json`:
+**User config** — `~/.cursor/mcp.json` (applies to all workspaces):
 
 ```json
 {
   "mcpServers": {
     "pixeltable-developer": {
-      "command": "mcp-server-pixeltable-developer"
+      "command": "mcp-server-pixeltable-developer",
+      "env": {
+        "PIXELTABLE_HOME": "/Users/you/.pixeltable"
+      }
     }
   }
 }
 ```
 
+If Cursor reports **command not found**, use the full path from `uv tool update-shell` / `which mcp-server-pixeltable-developer`, e.g. `"command": "/Users/you/.local/bin/mcp-server-pixeltable-developer"`.
+
+**Develop this repo from source** — optional project `.cursor/mcp.json` so the server runs from your clone (replace the path):
+
+```json
+{
+  "mcpServers": {
+    "pixeltable-developer": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mcp-server-pixeltable-developer", "python", "-m", "mcp_server_pixeltable_stio"],
+      "env": {
+        "PIXELTABLE_HOME": "/Users/you/.pixeltable"
+      }
+    }
+  }
+}
+```
+
+Do not define the same server name twice (user + project) unless you intend to run two entries.
+
 </details>
 
 Restart your client after configuration changes.
+
+---
+
+## Testing
+
+Use a **dedicated** `PIXELTABLE_HOME` for testing so you do not touch other catalogs.
+
+### MCP Inspector (interactive)
+
+From a clone, after `uv sync`:
+
+```bash
+export PIXELTABLE_HOME="$HOME/.pixeltable-mcp-test"
+uv run mcp dev src/mcp_server_pixeltable_stio/server.py:mcp
+```
+
+This starts the server and opens the **MCP Inspector** in your browser so you can invoke tools, read resources, and try prompts without an IDE.
+
+**Quick checks:** tool `pixeltable_check_dependencies` with expression `openai.chat_completions`; tool `execute_python` with `print(pxt.__version__)`; resource `pixeltable://version`.
+
+### Cursor
+
+Add `PIXELTABLE_HOME` under `env` in `.cursor/mcp.json` (see **Client Configuration** above). Restart Cursor, confirm the server connects, then run a simple tool from the MCP panel.
+
+### CLI sanity (no JSON-RPC)
+
+```bash
+mcp-server-pixeltable-developer --version
+uv run python list_tools.py
+```
+
+`--version` / `--help` exit immediately. `list_tools.py` only prints registered tools, resources, and prompts (import check, not a full MCP session).
 
 ---
 
@@ -153,6 +208,7 @@ src/mcp_server_pixeltable_stio/
 
 - **Restart your client** after any config change
 - **Python 3.10+** and **`uv`** are required
+- **`command not found` after `uv tool install`:** ensure `~/.local/bin` is on `PATH` (`uv tool update-shell`) or invoke via full path; confirm with `mcp-server-pixeltable-developer --version`
 - Check that `PIXELTABLE_HOME` points to a valid directory
 - Use `log_bug(...)` / `generate_bug_report()` for structured issue tracking
 - File issues at [github.com/pixeltable/mcp-server-pixeltable-developer](https://github.com/pixeltable/mcp-server-pixeltable-developer/issues)

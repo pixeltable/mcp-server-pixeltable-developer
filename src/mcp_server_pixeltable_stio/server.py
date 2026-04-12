@@ -122,11 +122,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Shown to MCP clients that support server instructions (helps models use tools correctly).
+PIXELTABLE_SERVER_INSTRUCTIONS = """\
+Developer MCP server for Pixeltable: tables, views, queries, AI pipelines, and a REPL against your catalog.
+Use pixeltable:// resources first for cheap read-only context (tables, schema, version, diagnostics, help).
+Callable tools are mostly named pixeltable_*; REPL helpers (execute_python, introspect_function, …), \
+logging tools, and display_in_browser are unprefixed. Set PIXELTABLE_HOME to your data directory. \
+Prefer query_table / query for reads; create_table, insert_data, and drop_* mutate the catalog."""
+
 
 # ===========================================================================
 # Create the MCP server instance at MODULE LEVEL so `mcp dev` can find it
 # ===========================================================================
-mcp = FastMCP(name="pixeltable-developer")
+mcp = FastMCP(
+    name="pixeltable-developer",
+    instructions=PIXELTABLE_SERVER_INSTRUCTIONS,
+)
 
 
 # ===================

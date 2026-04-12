@@ -7,8 +7,9 @@ Runs alongside the main MCP stdio transport using FastAPI.
 import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 from typing import Dict, Any, List
-from queue import Queue
+from queue import Queue, Empty
 import threading
 
 from fastapi import FastAPI
@@ -54,20 +55,27 @@ async def message_broadcaster():
             # Broadcast to all connected clients
             for client_queue in _sse_clients:
                 await client_queue.put(message)
-        except:
-            # Queue empty, sleep briefly
+        except Empty:
             await asyncio.sleep(0.1)
 
 
 def create_canvas_app() -> FastAPI:
     """Create FastAPI app for canvas streaming."""
-    app = FastAPI(title="Pixeltable Canvas")
 
-    @app.on_event("startup")
-    async def startup():
-        # Start message broadcaster
-        asyncio.create_task(message_broadcaster())
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        task = asyncio.create_task(message_broadcaster())
         logger.info("Canvas message broadcaster started")
+        try:
+            yield
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    app = FastAPI(title="Pixeltable Canvas", lifespan=lifespan)
 
     @app.get("/canvas/stream")
     async def canvas_stream():

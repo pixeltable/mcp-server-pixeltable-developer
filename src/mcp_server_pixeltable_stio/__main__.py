@@ -5,6 +5,7 @@ Activates uvloop (if available) before any other asyncio usage,
 then delegates to server.main().
 """
 
+import argparse
 import asyncio
 import logging
 import sys
@@ -25,8 +26,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _package_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("mcp-server-pixeltable-developer")
+    except Exception:
+        from mcp_server_pixeltable_stio import __version__
+
+        return __version__
+
+
 def main():
     """Entry point called by the console script."""
+    parser = argparse.ArgumentParser(
+        prog="mcp-server-pixeltable-developer",
+        description=(
+            "Pixeltable developer MCP server: stdio JSON-RPC for MCP clients, "
+            "optional canvas UI on http://127.0.0.1:7777/canvas."
+        ),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {_package_version()}",
+    )
+    parser.parse_args()
+
     logger.info("Starting Pixeltable MCP server")
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Current directory: {os.getcwd()}")
