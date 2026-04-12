@@ -12,7 +12,7 @@ import asyncio
 import logging
 from typing import Dict, Any
 
-# Activate uvloop for better async performance (Pixeltable v0.5.19+ compatible)
+# Activate uvloop for better async performance (Pixeltable 0.5.x compatible)
 try:
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -128,7 +128,10 @@ Developer MCP server for Pixeltable: tables, views, queries, AI pipelines, and a
 Use pixeltable:// resources first for cheap read-only context (tables, schema, version, diagnostics, help).
 Callable tools are mostly named pixeltable_*; REPL helpers (execute_python, introspect_function, …), \
 logging tools, and display_in_browser are unprefixed. Set PIXELTABLE_HOME to your data directory. \
-Prefer query_table / query for reads; create_table, insert_data, and drop_* mutate the catalog."""
+Prefer query_table / query for reads; create_table, insert_data, and drop_* mutate the catalog.
+Current Pixeltable APIs: there is no openai.vision — use openai.chat_completions with image_url content blocks; \
+use frame_iterator from pixeltable.functions.video (not pixeltable.iterators.FrameIterator); \
+for similarity search use column.similarity(string=query). See Pixeltable docs and the pixeltable-skill reference."""
 
 
 # ===========================================================================

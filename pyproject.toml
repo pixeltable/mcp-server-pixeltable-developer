@@ -24,8 +24,10 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pixeltable>=0.5.19",
-    "mcp[cli]>=1.0.0",
+    # 0.5.27+: pixeltable.functions.yolox, document_splitter, frame_iterator (pixeltable.ext removed)
+    "pixeltable>=0.5.27",
+    # FastMCP / Inspector: 1.10+ matches current SDK; loosen if you must support older envs
+    "mcp[cli]>=1.10.0",
     "requests>=2.31.0",
     "toml>=0.10.2",
     "fastapi>=0.115.0",

@@ -298,7 +298,7 @@ def pixeltable_get_help() -> Dict[str, Any]:
                 "Create table with pxt.Image column",
                 "Insert images from directory or URLs",
                 "Add YOLOX for object detection: 'yolox.yolox(image, threshold=0.5)'",
-                "Add OpenAI Vision: 'openai.vision(prompt, image)'",
+                "Add OpenAI vision: openai.chat_completions with image_url / image content blocks",
                 "Query results with filters"
             ],
             "3_rag_pipeline": [

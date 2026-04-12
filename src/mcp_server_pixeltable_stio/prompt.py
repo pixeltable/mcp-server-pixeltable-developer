@@ -133,8 +133,8 @@ pixeltable_check_dependencies("yolox openai")
 ```
 Install what's missing:
 ```python
-pixeltable_smart_install("yolox")   # For object detection
-pixeltable_smart_install("openai")  # For GPT-4 Vision
+pixeltable_install_dependency("yolox")   # For object detection
+pixeltable_install_dependency("openai")  # For GPT-4 / chat_completions
 ```
 
 ## Step 3: Add Images
@@ -202,8 +202,8 @@ pixeltable_check_dependencies("openai sentence-transformers")
 ```
 Install what's needed:
 ```python
-pixeltable_smart_install("openai")
-pixeltable_smart_install("sentence-transformers")
+pixeltable_install_dependency("openai")
+pixeltable_install_dependency("sentence-transformers")
 ```
 
 ## Step 3: Ingest Documents
@@ -215,22 +215,19 @@ pixeltable_insert_data("rag.documents", [
 ```
 
 ## Step 4: Create a Chunks View
-Use Pixeltable's document chunking to split documents into searchable pieces:
+Use Pixeltable's document splitter to chunk documents into searchable rows (see pixeltable-skill: `document_splitter`):
 ```python
 # Use the REPL for more complex operations
 execute_python('''
 import pixeltable as pxt
-from pixeltable.iterators import DocumentSplitter
+from pixeltable.functions.document import document_splitter
 
 docs = pxt.get_table("rag.documents")
 chunks = pxt.create_view(
     "rag.chunks",
     docs,
-    iterator=DocumentSplitter.create(
-        document=docs.document,
-        separators="sentence",
-        metadata="title,page"
-    )
+    iterator=document_splitter(docs.document, separators="token_limit", limit=300),
+    if_exists="ignore",
 )
 ''')
 ```
@@ -242,17 +239,20 @@ import pixeltable as pxt
 from pixeltable.functions.huggingface import sentence_transformer
 
 chunks = pxt.get_table("rag.chunks")
-chunks.add_embedding_index("text", string_embed=sentence_transformer.using(model_id="all-MiniLM-L6-v2"))
+embed_fn = sentence_transformer.using(model_id="all-MiniLM-L6-v2")
+chunks.add_embedding_index("text", embedding=embed_fn, if_exists="ignore")
 ''')
 ```
 
 ## Step 6: Search
+Use `similarity(string=...)` on the embedded column (keyword argument required):
 ```python
 execute_python('''
 import pixeltable as pxt
 chunks = pxt.get_table("rag.chunks")
-results = chunks.select(chunks.text, chunks.title).similarity("text", "How does X work?").limit(5).collect()
-print(results)
+sim = chunks.text.similarity(string="How does X work?")
+results = chunks.order_by(sim, asc=False).limit(5).select(chunks.text, sim).collect()
+print(list(results))
 ''')
 ```
 
@@ -270,7 +270,7 @@ chunks = pxt.get_table("rag.chunks")
 ```
 
 ## Key Concepts
-- **Automatic Chunking**: DocumentSplitter handles PDF/text splitting
+- **Automatic Chunking**: `document_splitter` iterator expands each document into chunk rows
 - **Embedding Indexes**: Built-in vector search with multiple embedding models
 - **Incremental Updates**: New documents are automatically chunked and embedded
 - **Hybrid Search**: Combine vector similarity with structured filters
@@ -304,20 +304,18 @@ pixeltable_insert_data("video.clips", [
 ```
 
 ## Step 3: Extract Frames
-Create a view that extracts frames at regular intervals:
+Create a view that extracts frames using `frame_iterator` from `pixeltable.functions.video` (not `pixeltable.iterators`):
 ```python
 execute_python('''
 import pixeltable as pxt
-from pixeltable.iterators import FrameIterator
+from pixeltable.functions.video import frame_iterator
 
 clips = pxt.get_table("video.clips")
 frames = pxt.create_view(
     "video.frames",
     clips,
-    iterator=FrameIterator.create(
-        video=clips.video,
-        fps=1  # 1 frame per second
-    )
+    iterator=frame_iterator(clips.video, fps=1.0),
+    if_exists="ignore",
 )
 ''')
 ```
@@ -329,25 +327,31 @@ Add AI models to process each extracted frame:
 ```python
 execute_python('''
 import pixeltable as pxt
+from pixeltable.functions.yolox import yolox
+
 frames = pxt.get_table("video.frames")
-frames.add_computed_column(detections=yolox.yolox(frames.frame, model_id="yolox_m"))
+frames.add_computed_column(detections=yolox(frames.frame, model_id="yolox_m", threshold=0.5), if_exists="ignore")
 ''')
 ```
 
 ### Scene Description
+Use `chat_completions` with image_url blocks (there is no `openai.vision`):
 ```python
 execute_python('''
 import pixeltable as pxt
-from pixeltable.functions import openai
+from pixeltable.functions.openai import chat_completions
 
 frames = pxt.get_table("video.frames")
-frames.add_computed_column(scene_description=openai.chat_completions(
-    messages=[{"role": "user", "content": [
-        {"type": "text", "text": "Briefly describe this video frame"},
-        {"type": "image_url", "image_url": {"url": frames.frame}}
-    ]}],
-    model="gpt-4o-mini"
-))
+frames.add_computed_column(
+    scene_description=chat_completions(
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": "Briefly describe this video frame"},
+            {"type": "image_url", "image_url": {"url": frames.frame}},
+        ]}],
+        model="gpt-4o-mini",
+    ).choices[0].message.content,
+    if_exists="ignore",
+)
 ''')
 ```
 
@@ -369,7 +373,7 @@ pixeltable_query_table("video.frames", limit=20)
 ```
 
 ## Key Concepts
-- **Frame Extraction**: FrameIterator creates a row per frame automatically
+- **Frame Extraction**: `frame_iterator` yields one row per sampled frame
 - **Per-Frame Analysis**: Computed columns run on every extracted frame
 - **Audio + Video**: Process both tracks independently, then join
 - **Temporal Queries**: Filter frames by timestamp or detected objects
@@ -400,8 +404,8 @@ pixeltable_check_dependencies("whisper openai")
 ```
 Install what's needed:
 ```python
-pixeltable_smart_install("whisper")
-pixeltable_smart_install("openai")
+pixeltable_install_dependency("whisper")
+pixeltable_install_dependency("openai")
 ```
 
 ## Step 3: Insert Audio Files

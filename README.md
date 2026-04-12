@@ -2,7 +2,7 @@
 
 Multimodal AI data infrastructure as an MCP server. **32 tools · 13 resources · 6 prompts** for table management, AI/ML pipelines, dependency management, an interactive REPL, and more.
 
-Uses **sync endpoints** + **uvloop** for best performance with Pixeltable ≥ 0.5.19.
+Uses **sync endpoints** + **uvloop** for best performance with Pixeltable **≥ 0.5.27** (see `pyproject.toml`).
 
 ---
 
@@ -178,10 +178,17 @@ Create a table called movies with title, year, and rating columns → insert sam
 
 Add a computed column that runs YOLOX object detection on every image
 
-Check what deps I need for openai.vision(...) → install them
+Check what deps I need for openai.chat_completions(...) → install them
 
 execute_python("print(pxt.list_tables())")
 ```
+
+---
+
+## Documentation
+
+- [Pixeltable docs](https://docs.pixeltable.com/)
+- [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/SKILL.md) — task router, API pitfalls (`openai.vision` vs `chat_completions`, `frame_iterator`, `similarity(string=...)`, etc.), and workflow examples aligned with current Pixeltable
 
 ---
 

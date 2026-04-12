@@ -17,6 +17,42 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Pixeltable integration paths (YOLOX moved in 0.5.x)
+# ---------------------------------------------------------------------------
+
+
+def import_pixeltable_yolox_module():
+    """Return the Pixeltable YOLOX UDF module.
+
+    Current Pixeltable exposes ``pixeltable.functions.yolox``. Older builds used
+    ``pixeltable.ext.functions``, which no longer exists — importing the wrong
+    path caused false \"install failed\" errors after ``pixeltable-yolox`` was
+    installed.
+    """
+    try:
+        from pixeltable.functions import yolox
+
+        return yolox
+    except ImportError:
+        try:
+            from pixeltable.ext.functions import yolox  # type: ignore
+
+            return yolox
+        except ImportError:
+            return None
+
+
+def _yolox_megvii_runtime_ready() -> bool:
+    """True if the Megvii ``yolox`` package (from pixeltable-yolox) is importable."""
+    try:
+        import yolox  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -86,19 +122,26 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
 
     expr_lower = expression.lower()
 
-    # YOLOX
+    # YOLOX (UDF shim in pixeltable.functions; Megvii stack via pixeltable-yolox)
     if 'yolox' in expr_lower:
-        try:
-            from pixeltable.ext.functions import yolox  # noqa: F401
-            available.append('yolox')
-        except ImportError:
+        if import_pixeltable_yolox_module() is None:
+            missing.append({
+                'name': 'yolox',
+                'packages': ['pixeltable>=0.5.27'],
+                'size': 'n/a',
+                'time': 'n/a',
+                'description': 'Pixeltable YOLOX functions not found; upgrade pixeltable',
+            })
+        elif not _yolox_megvii_runtime_ready():
             missing.append({
                 'name': 'yolox',
                 'packages': ['torch', 'torchvision', 'pixeltable-yolox'],
                 'size': '~2.5GB',
                 'time': '5-10 minutes',
-                'description': 'YOLO object detection',
+                'description': 'YOLO object detection (Megvii YOLOX runtime)',
             })
+        else:
+            available.append('yolox')
 
     # OpenAI
     if any(term in expr_lower for term in ['openai', 'gpt']):
@@ -167,12 +210,23 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
                     'description': info['description'],
                 })
 
-    # Audio / speech
+    # Audio / speech (legacy whisperx lived under pixeltable.ext; fall back to openai-whisper)
     if any(term in expr_lower for term in ['whisper', 'speech', 'audio']):
+        whisper_ok = False
         try:
-            from pixeltable.ext.functions import whisperx  # noqa: F401
-            available.append('whisperx')
+            from pixeltable.ext.functions import whisperx  # type: ignore  # noqa: F401
+
+            whisper_ok = True
         except ImportError:
+            try:
+                import whisper  # noqa: F401
+
+                whisper_ok = True
+            except ImportError:
+                pass
+        if whisper_ok:
+            available.append('whisperx')
+        else:
             missing.append({
                 'name': 'whisper',
                 'packages': ['openai-whisper'],
@@ -209,19 +263,22 @@ def _install_yolox() -> Dict[str, Any]:
                 }
             logger.info(f"Successfully installed {package}")
 
-        try:
-            from pixeltable.ext.functions import yolox  # noqa: F401
-            return {
-                'success': True,
-                'message': 'YOLOX installed successfully with uv! Object detection is now available.',
-                'installed_packages': packages,
-                'method': 'uv',
-            }
-        except ImportError as e:
+        if import_pixeltable_yolox_module() is None:
             return {
                 'success': False,
-                'error': f'Installation completed but import failed: {e}',
+                'error': 'Pixeltable YOLOX UDF module not found after install; upgrade pixeltable.',
             }
+        if not _yolox_megvii_runtime_ready():
+            return {
+                'success': False,
+                'error': 'Megvii YOLOX (import yolox) failed after install; verify torch and pixeltable-yolox.',
+            }
+        return {
+            'success': True,
+            'message': 'YOLOX installed successfully with uv! Object detection is now available.',
+            'installed_packages': packages,
+            'method': 'uv',
+        }
 
     except subprocess.TimeoutExpired:
         return {'success': False, 'error': 'Installation timed out after 10 minutes'}
@@ -688,11 +745,8 @@ def pixeltable_system_diagnostics() -> Dict[str, Any]:
             except Exception:
                 pass
 
-        try:
-            from pixeltable.ext.functions import yolox  # noqa: F401
+        if import_pixeltable_yolox_module() is not None and _yolox_megvii_runtime_ready():
             diagnostics['dependencies']['yolox'] = True
-        except ImportError:
-            pass
 
         try:
             from pixeltable.functions import openai  # noqa: F401

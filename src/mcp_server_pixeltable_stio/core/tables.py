@@ -495,14 +495,18 @@ def pixeltable_add_computed_column(
 
     Example expressions:
         - "yolox.yolox(table.image, model_id='yolox_s', threshold=0.5)"
-        - "openai.vision('Describe this image', table.image, model='gpt-4o-mini')"
+        - "openai.chat_completions(...)" with image content blocks for vision (not openai.vision)
         - "image.width(table.image)"
     """
     try:
         ensure_pixeltable_available()
 
         # Import dependency helpers (avoids circular import at module level)
-        from .dependencies import check_dependencies, pixeltable_auto_install_for_expression
+        from .dependencies import (
+            check_dependencies,
+            import_pixeltable_yolox_module,
+            pixeltable_auto_install_for_expression,
+        )
 
         deps = check_dependencies(expression)
 
@@ -549,11 +553,9 @@ def pixeltable_add_computed_column(
                 'pixeltable': pxt,
             }
 
-            try:
-                from pixeltable.ext.functions import yolox
-                eval_context['yolox'] = yolox
-            except ImportError:
-                pass
+            yolox_mod = import_pixeltable_yolox_module()
+            if yolox_mod is not None:
+                eval_context['yolox'] = yolox_mod
 
             try:
                 from pixeltable.functions import openai, image, string, math
