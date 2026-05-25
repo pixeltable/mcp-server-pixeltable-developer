@@ -1,8 +1,8 @@
 # Pixeltable MCP Server (Developer Edition)
 
-Multimodal AI data infrastructure as an MCP server. **32 tools · 13 resources · 6 prompts** for table management, AI/ML pipelines, dependency management, an interactive REPL, and more.
+Multimodal AI data infrastructure as an MCP server. **35 tools · 13 resources · 11 prompts** for catalog management, AI/ML pipelines, dependency management, project scaffolding, and an interactive REPL.
 
-Uses **sync endpoints** + **uvloop** for best performance with Pixeltable **≥ 0.5.27** (see `pyproject.toml`).
+Uses **sync endpoints** + **uvloop** for best performance with Pixeltable **≥ 0.6.3** (see `pyproject.toml`). Aligned with the [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill) and [pixeltable-starter-kit](https://github.com/pixeltable/pixeltable-starter-kit) conventions (`pxt.mcp_udfs`, `FastAPIRouter`, `return_rows=True`, `pxt.Required[T]`, `pxt.Array[T]`).
 
 ---
 
@@ -130,23 +130,27 @@ uv run python list_tools.py
 
 ---
 
-## Tools (32)
+## Tools (35)
 
 | Category | Tools |
 |---|---|
+| **Init** | `init` (recovery for circular env init) |
 | **Tables** | `create_table` · `drop_table` · `create_view` · `create_snapshot` |
 | **Data** | `create_replica` · `query_table` · `insert_data` · `query` · `add_computed_column` |
 | **Directories** | `create_dir` · `drop_dir` · `move` |
 | **Config** | `configure_logging` · `set_datastore` |
-| **AI/ML** | `create_udf` · `create_array` · `create_tools` · `connect_mcp` |
+| **AI/ML** | `create_udf` · `create_array` · `create_tools` · `connect_mcp` (wraps `pxt.mcp_udfs`) |
 | **Deps** | `check_dependencies` · `install_dependency` |
-| **Types** | `create_type` (Image, Video, Audio, Array[Float], …) |
+| **Types** | `create_type` (Image, Video, Audio, Array[Float], `Required[T]`, …) |
 | **Docs** | `search_docs` |
+| **Scaffolding** | `scaffold_project` · `list_project_templates` (wraps `pixeltable-new`) |
 | **REPL** | `execute_python` · `introspect_function` · `list_available_functions` · `install_package` |
 | **Logging** | `log_bug` · `log_missing_feature` · `log_success` · `generate_bug_report` · `get_session_summary` |
-| **Display** | `display_in_browser` |
+| **Display** | `display_in_browser` (canvas-extra + `PIXELTABLE_MCP_CANVAS=1`) |
 
-All tools are prefixed `pixeltable_` (except REPL/logging helpers). Full docstrings available via `introspect_function`.
+All tools are prefixed `pixeltable_` (except REPL/logging helpers). Full docstrings available via `introspect_function`. `pixeltable://tools` always reflects the live FastMCP registration.
+
+`create_view` accepts `iterator` (`frame_iterator` / `document_splitter` / `audio_splitter` / `string_splitter`) + `iterator_kwargs` so frame and chunk views don't require dropping into `execute_python`.
 
 ## Resources (13)
 
@@ -161,13 +165,15 @@ All tools are prefixed `pixeltable_` (except REPL/logging helpers). Full docstri
 | `pixeltable://config/datastore` | Datastore config |
 | `pixeltable://types` | Available data types |
 | `pixeltable://functions` | Registered Pixeltable functions |
-| `pixeltable://tools` | MCP tool list |
-| `pixeltable://help` | Workflow guidance |
+| `pixeltable://tools` | MCP tool list (introspects the live FastMCP server) |
+| `pixeltable://help` | Workflow guidance + pitfalls |
 | `pixeltable://diagnostics` | System & dependency diagnostics |
 
-## Prompts (6)
+## Prompts (11)
 
-`pixeltable_usage_guide` · `getting_started` · `computer_vision_pipeline` · `rag_pipeline` · `video_analysis_pipeline` · `audio_processing_pipeline`
+Core: `pixeltable_usage_guide` (now leads with pitfalls) · `getting_started` · `computer_vision_pipeline` · `rag_pipeline` · `video_analysis_pipeline` · `audio_processing_pipeline`
+
+Agent / data (from [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill)): `tool_calling_agent_pipeline` · `agent_with_memory_pipeline` · `video_rag_agent_pipeline` · `agentic_patterns_guide` · `ml_data_pipeline`
 
 ---
 
@@ -188,7 +194,9 @@ execute_python("print(pxt.list_tables())")
 ## Documentation
 
 - [Pixeltable docs](https://docs.pixeltable.com/)
-- [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/SKILL.md) — task router, API pitfalls (`openai.vision` vs `chat_completions`, `frame_iterator`, `similarity(string=...)`, etc.), and workflow examples aligned with current Pixeltable
+- [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/SKILL.md) — task router, [critical anti-patterns](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/references/anti-patterns.md) (`openai.vision`, `FrameIterator`, positional `.similarity`, etc.), and workflow examples aligned with current Pixeltable
+- [pixeltable-starter-kit](https://github.com/pixeltable/pixeltable-starter-kit) — `FastAPIRouter` / `pxt serve` patterns and seven app templates; use `pixeltable_scaffold_project` to bootstrap them
+- Consumer side of MCP: `pxt.mcp_udfs(url)` (Pixeltable 0.6.x+) pulls this server's tools into a Pixeltable agent; expose them with `pxt.tools(local_udf, *mcp_tools)` and `invoke_tools`
 
 ---
 
@@ -196,18 +204,36 @@ execute_python("print(pxt.list_tables())")
 
 ```
 src/mcp_server_pixeltable_stio/
-  server.py            FastMCP server, tool/resource/prompt registration, uvloop activation
+  server.py            FastMCP server, tool/resource/prompt registration, uvloop, canvas gate
   core/
-    tables.py          Table CRUD, views, snapshots, replicas, queries, computed columns
+    tables.py          Table CRUD, views (iterator support), snapshots, replicas, queries,
+                       computed columns (eval context exposes all skill providers),
+                       _resolve_pxt_type (Required[T] / Array[T] / dict form)
     directories.py     Directory CRUD, listing, moving
     dependencies.py    Dependency checking, unified installer, diagnostics
-    udf.py             UDF creation, type system, LLM tool wrappers, MCP connections
-    helpers.py         Config, version, docs search, shared utilities
+    udf.py             UDF creation, type system, pxt.tools / pxt.mcp_udfs wrappers
+    helpers.py         Config, version, docs search, live pixeltable://tools introspection
     resources.py       Read-only MCP resource handlers
-  prompt.py            Prompt templates for common workflows
+    scaffold.py        pixeltable-new wrappers (module first, uvx fallback)
+    canvas_server.py   Optional browser canvas (lazy-imported; opt-in via env)
+  prompt.py            Prompt templates (11 prompts covering core flows + 5 skill agent flows)
   repl_functions.py    Persistent Python REPL, introspection, package management
-  canvas_server.py     Browser canvas for rich content display
+tests/                 Fast pytest suite + slow smoke (--run-slow uses tmp PIXELTABLE_HOME)
+.github/workflows/     CI: matrix py3.10/3.11/3.12, list_tools.py + pytest
 ```
+
+## Optional canvas display
+
+The `display_in_browser` tool requires:
+
+1. Install the canvas extra: `uv pip install 'mcp-server-pixeltable-developer[canvas]'` (adds FastAPI + uvicorn).
+2. Start the MCP server with `PIXELTABLE_MCP_CANVAS=1` (override the port with `PIXELTABLE_MCP_CANVAS_PORT`).
+
+Without those, the tool returns a clear error and core MCP traffic is unaffected.
+
+## Project scaffolding
+
+`pixeltable_list_project_templates` and `pixeltable_scaffold_project` wrap [`pixeltable-new`](https://github.com/pixeltable/pixeltable-new). The MCP imports `pixeltable_new.new` if installed, otherwise shells out to `uvx pixeltable-new --json`. Patterns: `serving` / `backend` / `batch`. Templates include `multimodal-rag`, `agent`, `video-intel`, `audio-intel`, `data-lab`, `content-pipeline`, `full-stack-showcase`.
 
 ---
 
@@ -217,5 +243,7 @@ src/mcp_server_pixeltable_stio/
 - **Python 3.10+** and **`uv`** are required
 - **`command not found` after `uv tool install`:** ensure `~/.local/bin` is on `PATH` (`uv tool update-shell`) or invoke via full path; confirm with `mcp-server-pixeltable-developer --version`
 - Check that `PIXELTABLE_HOME` points to a valid directory
+- **Circular env initialization detected:** call the `pixeltable_init` tool to clear the stale state, or re-create your `PIXELTABLE_HOME`
+- **Canvas error from `display_in_browser`:** install the `canvas` extra and set `PIXELTABLE_MCP_CANVAS=1` (see above)
 - Use `log_bug(...)` / `generate_bug_report()` for structured issue tracking
 - File issues at [github.com/pixeltable/mcp-server-pixeltable-developer](https://github.com/pixeltable/mcp-server-pixeltable-developer/issues)

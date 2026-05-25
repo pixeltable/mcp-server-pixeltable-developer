@@ -127,7 +127,7 @@ def check_dependencies(expression: str) -> Dict[str, Any]:
         if import_pixeltable_yolox_module() is None:
             missing.append({
                 'name': 'yolox',
-                'packages': ['pixeltable>=0.5.27'],
+                'packages': ['pixeltable>=0.6.3'],
                 'size': 'n/a',
                 'time': 'n/a',
                 'description': 'Pixeltable YOLOX functions not found; upgrade pixeltable',

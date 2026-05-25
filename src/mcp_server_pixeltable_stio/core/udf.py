@@ -98,24 +98,24 @@ def pixeltable_create_udf(
 # Array expression helper
 # ---------------------------------------------------------------------------
 
-def pixeltable_create_array(elements: list, kwargs: str = "{}") -> Dict[str, Any]:
+def pixeltable_create_array(elements: list) -> Dict[str, Any]:
     """Create array expressions for Pixeltable.
 
-    Useful for creating complex data structures and expressions
-    that can be used in queries and computed columns.
+    Useful for assembling literal arrays in queries and computed columns.
 
     Args:
-        elements: List of elements for the array
-        kwargs: Additional parameters for array creation (JSON string)
+        elements: List of elements for the array.
 
     Returns:
-        Array expression result
+        Summary of the constructed array (the underlying expression stays in
+        Pixeltable; MCP just reports a preview).
     """
     try:
         ensure_pixeltable_available()
 
-        array_expr = pxt.Array(elements)
-
+        # pxt.Array as a class is subscriptable for types; the helper here is
+        # for callers building literal arrays, which round-trip as plain lists
+        # in Pixeltable expressions.
         return {
             "success": True,
             "message": f"Array created with {len(elements)} elements",
@@ -136,43 +136,66 @@ def pixeltable_create_array(elements: list, kwargs: str = "{}") -> Dict[str, Any
 # Tools wrapper for LLM integration
 # ---------------------------------------------------------------------------
 
-def pixeltable_create_tools(udfs: str, kwargs: str = "{}") -> Dict[str, Any]:
-    """Create tools collection for LLM integration.
+def pixeltable_create_tools(
+    function_names: List[str],
+    register_as: str = "tools",
+) -> Dict[str, Any]:
+    """Bind a ``pxt.tools(...)`` collection in the persistent REPL.
 
-    Wraps UDFs for use with language models and tool-calling APIs.
-    Enables integration between Pixeltable functions and AI models.
+    Pixeltable agents pass ``tools=pxt.tools(*fns)`` into provider ``messages`` /
+    ``chat_completions`` calls. The REPL runs in a subprocess, so this helper
+    pushes code into it to build the collection from names you've already
+    defined there with ``execute_python`` (``@pxt.udf`` / ``@pxt.query``
+    callables, or names from ``pixeltable_connect_mcp``).
 
     Args:
-        udfs: UDF functions to wrap as tools
-        kwargs: Additional parameters for tool creation (JSON string)
+        function_names: REPL variable names that resolve to UDFs / queries / MCP tools.
+            Use a name prefixed with ``*`` to splat a sequence
+            (e.g. ``['local_query', '*mcp_tools']`` → ``pxt.tools(local_query, *mcp_tools)``).
+        register_as: REPL variable name to bind the resulting ``pxt.tools(...)`` value to.
 
     Returns:
-        Tools collection information
+        Echo of the binding and the inspected ``len(register_as)``.
     """
     try:
         ensure_pixeltable_available()
 
-        tools = []
-        for udf in udfs:
-            if callable(udf):
-                tool_info = {
-                    "name": getattr(udf, '__name__', 'unknown'),
-                    "type": "udf_tool",
-                    "callable": True,
-                    "function": udf,
-                }
-                tools.append(tool_info)
-            else:
-                return {
-                    "success": False,
-                    "error": f"Invalid UDF provided: {udf} is not callable",
-                }
+        if not function_names:
+            return {"success": False, "error": "function_names is empty"}
 
+        # Build the argument list, supporting `*name` splat.
+        args = []
+        for name in function_names:
+            if name.startswith('*'):
+                args.append(f"*{name[1:]}")
+            else:
+                args.append(name)
+        snippet = (
+            f"{register_as} = pxt.tools({', '.join(args)})\n"
+            f"print(f'__pxt_tools_count__={{len({register_as}._tools)}}')"
+        )
+
+        from .repl_functions import execute_python  # local import to avoid cycle
+        result = execute_python(snippet)
+        if not result.get('success'):
+            return {
+                "success": False,
+                "error": result.get('error') or result.get('stderr') or 'execute_python failed',
+                "snippet": snippet,
+            }
+
+        count = None
+        for line in (result.get('output') or '').splitlines():
+            if line.startswith('__pxt_tools_count__='):
+                try:
+                    count = int(line.split('=', 1)[1])
+                except ValueError:
+                    pass
         return {
             "success": True,
-            "message": f"Created tools collection with {len(tools)} tools",
-            "tools": tools,
-            "tool_count": len(tools),
+            "registered_as": register_as,
+            "tool_count": count,
+            "function_names": function_names,
         }
 
     except Exception as e:
@@ -181,32 +204,71 @@ def pixeltable_create_tools(udfs: str, kwargs: str = "{}") -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# External MCP connection
+# External MCP connection (uses pxt.mcp_udfs added in Pixeltable 0.6.x)
 # ---------------------------------------------------------------------------
 
-def pixeltable_connect_mcp(url: str, kwargs: str = "{}") -> Dict[str, Any]:
-    """Connect to external MCP server and import functions.
+def pixeltable_connect_mcp(
+    url: str,
+    register_as: str = "mcp_tools",
+) -> Dict[str, Any]:
+    """Pull tools from an external MCP server into the persistent REPL.
 
-    This enables research dataset sharing and function import capability.
-    Can be used to pull in functions from academic papers,
-    other research groups, or external AI services.
+    Wraps ``pxt.mcp_udfs(url)`` (Pixeltable >= 0.6.x). The list of UDF-shaped
+    callables is bound to ``register_as`` in the REPL so subsequent
+    ``execute_python`` calls can reference it directly or splat it through
+    ``pixeltable_create_tools(['local_query', '*mcp_tools'])``.
 
     Args:
-        url: URL of the MCP server to connect to
-        kwargs: Additional connection parameters (JSON string)
+        url: MCP server URL (typically ``http://host:port/mcp`` or ``http://host:port/sse``).
+        register_as: REPL variable name to bind the returned list to.
 
     Returns:
-        Connection status and available functions
+        Dict with the tools' names, comments, and binding info.
     """
     try:
         ensure_pixeltable_available()
 
+        if not hasattr(pxt, 'mcp_udfs'):
+            return {
+                "success": False,
+                "error": "pxt.mcp_udfs is unavailable. Upgrade Pixeltable to >= 0.6.x.",
+            }
+
+        # Push the connection into the REPL so the names are reusable later.
+        snippet = (
+            f"{register_as} = pxt.mcp_udfs({url!r})\n"
+            f"__pxt_mcp_meta__ = [\n"
+            f"    {{'name': getattr(t, 'name', None) or getattr(t, '__name__', 'unknown'),\n"
+            f"      'comment': (t.comment() if hasattr(t, 'comment') else (getattr(t, '__doc__', '') or '')).strip()}}\n"
+            f"    for t in {register_as}\n"
+            f"]\n"
+            f"import json as _json\n"
+            f"print('__pxt_mcp_tools__=' + _json.dumps(__pxt_mcp_meta__))"
+        )
+
+        from .repl_functions import execute_python  # local import to avoid cycle
+        result = execute_python(snippet)
+        if not result.get('success'):
+            return {
+                "success": False,
+                "error": result.get('error') or result.get('stderr') or 'execute_python failed',
+                "url": url,
+            }
+
+        tool_metadata = []
+        for line in (result.get('output') or '').splitlines():
+            if line.startswith('__pxt_mcp_tools__='):
+                try:
+                    tool_metadata = json.loads(line.split('=', 1)[1])
+                except json.JSONDecodeError:
+                    pass
+
         return {
-            "success": False,
-            "error": "MCP connection not yet implemented",
-            "message": "This feature is planned for future release",
+            "success": True,
             "url": url,
-            "status": "not_implemented",
+            "registered_as": register_as,
+            "tool_count": len(tool_metadata),
+            "tools": tool_metadata,
         }
 
     except Exception as e:

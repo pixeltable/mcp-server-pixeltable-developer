@@ -17,11 +17,88 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Schema type resolution
+# ---------------------------------------------------------------------------
+
+_BASE_PXT_TYPES = (
+    'Int', 'String', 'Float', 'Bool', 'Json',
+    'Image', 'Video', 'Audio', 'Document',
+    'Timestamp', 'Date', 'UUID', 'Binary',
+)
+
+
+def _resolve_base(name: str):
+    """Map a Pixeltable type name (case-insensitive) to its `pxt.<Type>` object."""
+    key = name.strip()
+    for candidate in _BASE_PXT_TYPES:
+        if candidate.lower() == key.lower():
+            return getattr(pxt, candidate)
+    raise ValueError(f"Unknown Pixeltable type: {name!r}")
+
+
+def _resolve_pxt_type(spec):
+    """Resolve a schema type spec to a real Pixeltable type object.
+
+    Supported shapes:
+      - actual Pixeltable type / annotated object (passed through)
+      - "String", "Image", "Float" (case-insensitive)
+      - "Required[String]"
+      - "Array[Float]", "Array[Int]", "Array[String]"
+      - "Required[Array[Float]]"
+      - {"type": "String", "required": true}
+      - {"type": "Array", "element_type": "Float"}
+      - {"type": "Array", "element_type": "Float", "required": true}
+
+    Raises ValueError for any unknown / malformed spec (no silent fallback).
+    """
+    if spec is None:
+        raise ValueError('Column type cannot be None')
+
+    if isinstance(spec, dict):
+        type_name = spec.get('type')
+        if not isinstance(type_name, str):
+            raise ValueError(f"Schema dict must include string 'type', got: {spec!r}")
+        if type_name.lower() == 'array':
+            element_name = spec.get('element_type') or spec.get('element') or 'Float'
+            element = _resolve_base(element_name)
+            inner = pxt.Array[element]
+        else:
+            inner = _resolve_base(type_name)
+        if spec.get('required'):
+            inner = pxt.Required[inner]
+        return inner
+
+    if not isinstance(spec, str):
+        # actual pxt type / annotated; passed through.
+        return spec
+
+    text = spec.strip()
+    if not text:
+        raise ValueError('Empty type spec')
+
+    lower = text.lower()
+    if lower.startswith('required[') and text.endswith(']'):
+        inner_spec = text[len('Required['): -1]
+        return pxt.Required[_resolve_pxt_type(inner_spec)]
+    if lower.startswith('array[') and text.endswith(']'):
+        element_spec = text[len('Array['): -1].strip()
+        # Only base types are allowed as Array element (no nested Array / Required).
+        element = _resolve_base(element_spec)
+        return pxt.Array[element]
+    return _resolve_base(text)
+
+
+# ---------------------------------------------------------------------------
 # Init / health-check
 # ---------------------------------------------------------------------------
 
 def pixeltable_init(config_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Check Pixeltable initialization status and try to resolve issues."""
+    """Check Pixeltable initialization and recover from circular-init failures.
+
+    Args:
+        config_overrides: Optional dict passed straight to ``pxt.init(config_overrides=...)``
+            (0.6.x signature).
+    """
     try:
         ensure_pixeltable_available()
 
@@ -37,65 +114,48 @@ def pixeltable_init(config_overrides: Optional[Dict[str, Any]] = None) -> Dict[s
             }
         except Exception as e:
             error_msg = str(e)
-            if "Circular env initialization detected" in error_msg:
-                try:
-                    logger.info("Attempting to reset Pixeltable's circular initialization flag")
-                    from pixeltable.env import Env
-                    from pixeltable.config import Config
-
-                    if hasattr(Env, '_Env__initializing'):
-                        logger.info(f"Current __initializing state: {Env._Env__initializing}")
-                        Env._Env__initializing = False
-                        logger.info("Reset __initializing flag to False")
-
-                    if hasattr(Env, '_instance') and Env._instance is not None:
-                        logger.info("Found existing Env instance, clearing it")
-                        Env._instance = None
-
-                    if hasattr(Config, '_Config__instance') and Config._Config__instance is not None:
-                        logger.info("Found existing Config instance, clearing it")
-                        Config._Config__instance = None
-
-                    os.environ['PIXELTABLE_FILE_CACHE_SIZE_G'] = '100'
-                    logger.info("Set PIXELTABLE_FILE_CACHE_SIZE_G=100")
-
-                    current_home = os.environ.get('PIXELTABLE_HOME')
-                    logger.info(f"Current PIXELTABLE_HOME: {current_home}")
-                    if current_home and current_home.startswith('~'):
-                        expanded_home = os.path.expanduser(current_home)
-                        os.environ['PIXELTABLE_HOME'] = expanded_home
-                        logger.info(f"Expanded PIXELTABLE_HOME from {current_home} to {expanded_home}")
-                    elif not current_home:
-                        default_home = os.path.expanduser('~/.pixeltable')
-                        os.environ['PIXELTABLE_HOME'] = default_home
-                        logger.info(f"Set PIXELTABLE_HOME to default: {default_home}")
-
-                    logger.info("Attempting fresh initialization after reset")
-                    if config_overrides:
-                        pxt.init(**config_overrides)
-                    else:
-                        pxt.init()
-
-                    tables = pxt.list_tables()
-                    return {
-                        "success": True,
-                        "message": "Pixeltable recovered from circular initialization after reset",
-                        "version": pxt.__version__,
-                        "table_count": len(tables)
-                    }
-                except Exception as e2:
-                    logger.error(f"Recovery attempt failed: {e2}")
-                    return {
-                        "success": False,
-                        "message": f"Circular initialization detected and recovery failed: {e2}",
-                        "version": pxt.__version__,
-                        "original_error": error_msg
-                    }
-            else:
+            if "Circular env initialization detected" not in error_msg:
                 return {
                     "success": False,
                     "message": f"Pixeltable is imported but not fully functional: {e}",
                     "version": pxt.__version__
+                }
+
+            try:
+                logger.info("Attempting to reset Pixeltable's circular initialization flag")
+                from pixeltable.env import Env
+                from pixeltable.config import Config
+
+                if hasattr(Env, '_Env__initializing'):
+                    Env._Env__initializing = False
+                if hasattr(Env, '_instance') and Env._instance is not None:
+                    Env._instance = None
+                if hasattr(Config, '_Config__instance') and Config._Config__instance is not None:
+                    Config._Config__instance = None
+
+                current_home = os.environ.get('PIXELTABLE_HOME')
+                if current_home and current_home.startswith('~'):
+                    os.environ['PIXELTABLE_HOME'] = os.path.expanduser(current_home)
+                elif not current_home:
+                    os.environ['PIXELTABLE_HOME'] = os.path.expanduser('~/.pixeltable')
+
+                logger.info("Attempting fresh initialization after reset")
+                pxt.init(config_overrides=config_overrides)
+
+                tables = pxt.list_tables()
+                return {
+                    "success": True,
+                    "message": "Pixeltable recovered from circular initialization after reset",
+                    "version": pxt.__version__,
+                    "table_count": len(tables)
+                }
+            except Exception as e2:
+                logger.error(f"Recovery attempt failed: {e2}")
+                return {
+                    "success": False,
+                    "message": f"Circular initialization detected and recovery failed: {e2}",
+                    "version": pxt.__version__,
+                    "original_error": error_msg
                 }
 
     except Exception as e:
@@ -115,13 +175,20 @@ def pixeltable_create_table(
     schema_overrides: Optional[Dict[str, Any]] = None,
     on_error: str = 'abort',
     primary_key: Optional[Union[str, List[str]]] = None,
-    num_retained_versions: int = 10,
-    comment: str = '',
+    create_default_idxs: bool = True,
+    comment: Optional[str] = None,
+    custom_metadata: Optional[Any] = None,
     media_validation: str = 'on_write',
     if_exists: str = 'error',
-    extra_args: Optional[Dict[str, Any]] = None
+    extra_args: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Create a new base table."""
+    """Create a new base table.
+
+    Schema column types accept string forms ("Image", "Required[String]", "Array[Float]")
+    or dict forms ({"type": "String", "required": True}). Unknown types raise an error
+    instead of silently falling back to String. Per pixeltable-skill anti-patterns, prefer
+    `pxt.Required[T]` (or `Required[T]` strings) for primary keys.
+    """
     try:
         ensure_pixeltable_available()
 
@@ -134,23 +201,13 @@ def pixeltable_create_table(
             if schema:
                 converted_schema = {}
                 for col_name, col_type in schema.items():
-                    if isinstance(col_type, str):
-                        type_mapping = {
-                            'int': pxt.Int, 'Int': pxt.Int,
-                            'string': pxt.String, 'String': pxt.String,
-                            'float': pxt.Float, 'Float': pxt.Float,
-                            'bool': pxt.Bool, 'Bool': pxt.Bool,
-                            'json': pxt.Json, 'Json': pxt.Json,
-                            'image': pxt.Image, 'Image': pxt.Image,
-                            'video': pxt.Video, 'Video': pxt.Video,
-                            'audio': pxt.Audio, 'Audio': pxt.Audio,
-                            'document': pxt.Document, 'Document': pxt.Document,
-                            'timestamp': pxt.Timestamp, 'Timestamp': pxt.Timestamp,
-                            'date': pxt.Date, 'Date': pxt.Date,
+                    try:
+                        converted_schema[col_name] = _resolve_pxt_type(col_type)
+                    except ValueError as e:
+                        return {
+                            "success": False,
+                            "error": f"Column '{col_name}': {e}",
                         }
-                        converted_schema[col_name] = type_mapping.get(col_type, pxt.String)
-                    else:
-                        converted_schema[col_name] = col_type
                 schema = converted_schema
 
             table = pxt.create_table(
@@ -161,11 +218,12 @@ def pixeltable_create_table(
                 schema_overrides=schema_overrides,
                 on_error=on_error,
                 primary_key=primary_key,
-                num_retained_versions=num_retained_versions,
+                create_default_idxs=create_default_idxs,
                 comment=comment,
+                custom_metadata=custom_metadata,
                 media_validation=media_validation,
                 if_exists=if_exists,
-                extra_args=extra_args
+                extra_args=extra_args,
             )
 
             return {"success": True, "table_path": path}
@@ -229,17 +287,76 @@ def pixeltable_drop_table(
 # Views & Snapshots
 # ---------------------------------------------------------------------------
 
+def _build_iterator(base_table, iterator_kind: str, kwargs: Dict[str, Any]):
+    """Build a GeneratingFunctionCall iterator for create_view / create_snapshot.
+
+    `iterator_kind` selects the iterator module/function; column-reference kwargs
+    (those whose value starts with 'table.') are resolved against `base_table`.
+
+    Supported kinds (skill workflows.md / providers.md):
+      - 'frame_iterator'      : video frames     (kwargs: video=table.video, fps=...)
+      - 'document_splitter'   : document chunks  (kwargs: document=table.document,
+                                                          separators='token_limit',
+                                                          limit=300)
+      - 'audio_splitter'      : audio chunks     (kwargs: audio=table.audio, duration=30.0)
+      - 'string_splitter'     : sentence chunks  (kwargs: text=table.text,
+                                                          separators='sentence')
+    """
+    if iterator_kind == 'frame_iterator':
+        from pixeltable.functions.video import frame_iterator as iter_fn
+    elif iterator_kind == 'document_splitter':
+        from pixeltable.functions.document import document_splitter as iter_fn
+    elif iterator_kind == 'audio_splitter':
+        from pixeltable.functions.audio import audio_splitter as iter_fn
+    elif iterator_kind == 'string_splitter':
+        from pixeltable.functions.string import string_splitter as iter_fn
+    else:
+        raise ValueError(
+            f"Unknown iterator '{iterator_kind}'. "
+            "Expected one of: frame_iterator, document_splitter, audio_splitter, string_splitter."
+        )
+
+    resolved = {}
+    for key, value in (kwargs or {}).items():
+        if isinstance(value, str) and value.startswith('table.'):
+            attr_name = value[len('table.'):]
+            if not hasattr(base_table, attr_name):
+                raise ValueError(f"Iterator kwarg '{key}': base table has no column '{attr_name}'")
+            resolved[key] = getattr(base_table, attr_name)
+        else:
+            resolved[key] = value
+    return iter_fn(**resolved)
+
+
 def pixeltable_create_view(
     path: str,
     base_table_path: str,
     additional_columns: Optional[Dict[str, Any]] = None,
     is_snapshot: bool = False,
-    num_retained_versions: int = 10,
-    comment: str = '',
+    create_default_idxs: bool = False,
+    iterator: Optional[str] = None,
+    iterator_kwargs: Optional[Dict[str, Any]] = None,
+    comment: Optional[str] = None,
+    custom_metadata: Optional[Any] = None,
     media_validation: str = 'on_write',
-    if_exists: str = 'error'
+    if_exists: str = 'error',
 ) -> Dict[str, Any]:
-    """Create a view of an existing table."""
+    """Create a view of an existing table.
+
+    Pass `iterator` ('frame_iterator', 'document_splitter', 'audio_splitter',
+    'string_splitter') with `iterator_kwargs` to build chunked or sampled views
+    without dropping into `execute_python`. Column-reference values are written
+    as strings like 'table.video' / 'table.document' / 'table.audio' / 'table.text'
+    and resolved against the base table.
+
+    Example:
+        pixeltable_create_view(
+            path='proj.frames', base_table_path='proj.videos',
+            iterator='frame_iterator',
+            iterator_kwargs={'video': 'table.video', 'fps': 1.0},
+            if_exists='ignore',
+        )
+    """
     try:
         ensure_pixeltable_available()
 
@@ -250,15 +367,21 @@ def pixeltable_create_view(
 
         try:
             base_table = pxt.get_table(base_table_path)
-            view = pxt.create_view(
+            iterator_call = None
+            if iterator:
+                iterator_call = _build_iterator(base_table, iterator, iterator_kwargs or {})
+
+            pxt.create_view(
                 path=path,
                 base=base_table,
                 additional_columns=additional_columns,
                 is_snapshot=is_snapshot,
-                num_retained_versions=num_retained_versions,
+                create_default_idxs=create_default_idxs,
+                iterator=iterator_call,
                 comment=comment,
+                custom_metadata=custom_metadata,
                 media_validation=media_validation,
-                if_exists=if_exists
+                if_exists=if_exists,
             )
             return {"success": True, "view_path": path}
         finally:
@@ -278,28 +401,38 @@ def pixeltable_create_snapshot(
     path: str,
     base_table_path: str,
     additional_columns: Optional[Dict[str, Any]] = None,
-    num_retained_versions: int = 10,
-    comment: str = '',
+    iterator: Optional[str] = None,
+    iterator_kwargs: Optional[Dict[str, Any]] = None,
+    comment: Optional[str] = None,
+    custom_metadata: Optional[Any] = None,
     media_validation: str = 'on_write',
-    if_exists: str = 'error'
+    if_exists: str = 'error',
 ) -> Dict[str, Any]:
-    """Create a snapshot of an existing table."""
+    """Create a snapshot of an existing table.
+
+    Accepts the same iterator + iterator_kwargs as create_view.
+    """
     try:
         ensure_pixeltable_available()
         base_table = pxt.get_table(base_table_path)
+        iterator_call = None
+        if iterator:
+            iterator_call = _build_iterator(base_table, iterator, iterator_kwargs or {})
+
         snapshot = pxt.create_snapshot(
             path_str=path,
             base=base_table,
             additional_columns=additional_columns,
-            num_retained_versions=num_retained_versions,
+            iterator=iterator_call,
             comment=comment,
+            custom_metadata=custom_metadata,
             media_validation=media_validation,
-            if_exists=if_exists
+            if_exists=if_exists,
         )
         return {
             "success": True,
             "message": f"Snapshot '{path}' created successfully",
-            "snapshot_path": str(snapshot._path()) if snapshot else path
+            "snapshot_path": str(snapshot._path()) if snapshot else path,
         }
     except Exception as e:
         logger.error(f"Error creating snapshot: {e}")
@@ -338,17 +471,38 @@ def pixeltable_get_table_schema(table_path: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def pixeltable_create_replica(destination: str, source: str) -> Dict[str, Any]:
-    """Create a replica of a table."""
+    """Replicate or publish a table (0.6.x: replaces the old create_replica API).
+
+    - If `source` looks like a remote URI (pxt://, http://, https://, pxtfs://),
+      pulls it into the local catalog at `destination` via `pxt.replicate(source, destination)`.
+    - Otherwise, `source` is a local table path and `destination` is a remote URI,
+      so we use `pxt.publish(source, destination)`.
+    """
     try:
         ensure_pixeltable_available()
-        if not source.startswith('pxt://'):
+        remote_prefixes = ('pxt://', 'pxtfs://', 'http://', 'https://', 's3://', 'gs://', 'az://')
+
+        if source.startswith(remote_prefixes):
+            pxt.replicate(remote_uri=source, local_path=destination)
+            return {
+                "success": True,
+                "message": f"Replicated remote '{source}' into local '{destination}'",
+            }
+
+        if destination.startswith(remote_prefixes):
             source_table = pxt.get_table(source)
-            result = pxt.create_replica(destination, source_table)
-        else:
-            result = pxt.create_replica(destination, source)
+            pxt.publish(source=source_table, destination_uri=destination)
+            return {
+                "success": True,
+                "message": f"Published local '{source}' to remote '{destination}'",
+            }
+
         return {
-            "success": True,
-            "message": f"Replica created from '{source}' to '{destination}'"
+            "success": False,
+            "error": (
+                "Either source or destination must be a remote URI "
+                "(pxt://, pxtfs://, http(s)://, s3://, gs://, az://)."
+            ),
         }
     except Exception as e:
         logger.error(f"Error creating replica: {e}")
@@ -557,18 +711,35 @@ def pixeltable_add_computed_column(
             if yolox_mod is not None:
                 eval_context['yolox'] = yolox_mod
 
-            try:
-                from pixeltable.functions import openai, image, string, math
-                eval_context.update({
-                    'openai': openai, 'image': image,
-                    'string': string, 'math': math
-                })
-            except ImportError:
-                pass
+            # Best-effort import of every provider/iterator module the skill references.
+            # Each name lives under pixeltable.functions.<name>; missing optional deps
+            # (e.g. anthropic, whisper) are skipped silently so expressions that don't
+            # use them still evaluate.
+            _provider_modules = [
+                # LLM / chat providers (skill providers.md)
+                'openai', 'anthropic', 'gemini', 'together', 'fireworks',
+                'ollama', 'mistralai', 'groq', 'deepseek', 'openrouter',
+                'replicate', 'bedrock', 'fabric', 'llama_cpp',
+                # Embeddings / multimodal
+                'huggingface', 'voyageai', 'jina', 'twelvelabs',
+                # Image / video generation
+                'bfl', 'runwayml', 'fal', 'reve',
+                # Audio
+                'whisper', 'whisperx',
+                # Iterators and utilities
+                'video', 'document', 'audio', 'string', 'image', 'math', 'uuid',
+            ]
+            for _name in _provider_modules:
+                try:
+                    _mod = __import__(f'pixeltable.functions.{_name}', fromlist=[_name])
+                    eval_context.setdefault(_name, _mod)
+                except ImportError:
+                    continue
 
+            # uuid7() is the common entrypoint from pixeltable.functions.uuid
             try:
-                from pixeltable.functions import huggingface
-                eval_context['huggingface'] = huggingface
+                from pixeltable.functions.uuid import uuid7  # type: ignore
+                eval_context['uuid7'] = uuid7
             except ImportError:
                 pass
 

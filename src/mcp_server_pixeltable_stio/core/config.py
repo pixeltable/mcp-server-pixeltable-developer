@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 import toml
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -97,25 +97,3 @@ def set_datastore_path(path: str) -> bool:
         config['storage'] = {}
     config['storage']['datastore_path'] = path
     return save_config(config)
-
-# Keep these for backward compatibility
-def get_effective_pixeltable_path() -> str:
-    """Get the effective Pixeltable data path."""
-    return get_datastore_path()
-
-def get_configured_datastore_path() -> Optional[str]:
-    """Get the configured datastore path."""
-    return get_datastore_path()
-
-def has_user_default_pixeltable() -> bool:
-    """Check if a custom datastore path is configured."""
-    config = load_config()
-    return 'storage' in config and 'datastore_path' in config['storage']
-
-def get_system_default_pixeltable_path() -> str:
-    """Get system default path."""
-    return os.path.expanduser('~/.pixeltable')
-
-def get_default_pixeltable_path() -> Optional[str]:
-    """No longer checks environment variables."""
-    return None

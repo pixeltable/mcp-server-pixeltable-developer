@@ -24,19 +24,24 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    # 0.5.27+: pixeltable.functions.yolox, document_splitter, frame_iterator (pixeltable.ext removed)
-    "pixeltable>=0.5.27",
+    # 0.6.x: pxt.mcp_udfs, FastAPIRouter, return_rows=True, named indexes; matches pixeltable-skill + starter-kit
+    "pixeltable>=0.6.3",
     # FastMCP / Inspector: 1.10+ matches current SDK; loosen if you must support older envs
     "mcp[cli]>=1.10.0",
     "requests>=2.31.0",
     "toml>=0.10.2",
-    "fastapi>=0.115.0",
-    "uvicorn>=0.32.0",
-    "websockets>=14.0",
     "uvloop>=0.19.0; sys_platform != 'win32'",
 ]
 
 [project.optional-dependencies]
+# Optional browser canvas (display_in_browser tool). Without this extra, canvas startup is skipped.
+canvas = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+]
+test = [
+    "pytest>=8.0",
+]
 all = [
     "ollama>=0.5.1",
     "fireworks-ai>=0.19.0",
@@ -46,6 +51,8 @@ all = [
     "pixeltable-yolox>=0.4.2",
     "transformers>=4.53.2",
     "gliner>=0.2.21",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
 ]
 ml = [
     "torch>=2.0.0",
@@ -80,4 +87,14 @@ include = [
     "/README.md",
     "/LICENSE",
     "/canvas.html",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "slow: end-to-end smoke tests that initialize a real Pixeltable catalog (opt-in via --run-slow)",
+]
+filterwarnings = [
+    "ignore:Field name \"schema\".*shadows.*:UserWarning",
 ]

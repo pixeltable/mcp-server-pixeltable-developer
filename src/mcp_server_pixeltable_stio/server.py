@@ -12,7 +12,7 @@ import asyncio
 import logging
 from typing import Dict, Any
 
-# Activate uvloop for better async performance (Pixeltable 0.5.x compatible)
+# Activate uvloop for better async performance (Pixeltable 0.6.x compatible)
 try:
     import uvloop
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -21,15 +21,13 @@ except ImportError:
 
 from mcp.server.fastmcp import FastMCP
 
-# Import utilities
-from mcp_server_pixeltable_stio.utils import setup_resilient_process
-
 # ---------------------------------------------------------------------------
 # Import core functionality from specialised modules
 # ---------------------------------------------------------------------------
 
 # Table management (tables.py)
 from mcp_server_pixeltable_stio.core.tables import (
+    pixeltable_init,
     pixeltable_create_table,
     pixeltable_drop_table,
     pixeltable_create_view,
@@ -99,6 +97,12 @@ from mcp_server_pixeltable_stio.core.repl_functions import (
     get_session_summary
 )
 
+# Project scaffolding (wraps pixeltable-new)
+from mcp_server_pixeltable_stio.core.scaffold import (
+    pixeltable_scaffold_project,
+    pixeltable_list_project_templates,
+)
+
 # Canvas server functions
 from mcp_server_pixeltable_stio.core.canvas_server import (
     run_canvas_server_thread,
@@ -113,6 +117,11 @@ from mcp_server_pixeltable_stio.prompt import (
     RAG_PIPELINE_PROMPT,
     VIDEO_ANALYSIS_PROMPT,
     AUDIO_PROCESSING_PROMPT,
+    TOOL_CALLING_AGENT_PROMPT,
+    AGENT_WITH_MEMORY_PROMPT,
+    VIDEO_RAG_AGENT_PROMPT,
+    AGENTIC_PATTERNS_PROMPT,
+    ML_DATA_PIPELINE_PROMPT,
 )
 
 # Configure logging
@@ -217,7 +226,9 @@ def diagnostics_resource() -> str:
 # MCP TOOLS (action-oriented operations)
 # ===================
 
-# Core table management (pixeltable_init removed -- ensure_pixeltable_available() runs automatically)
+# Core table management (init is exposed so MCP clients can run recovery for
+# the rare "circular env initialization" error; see pixeltable_init docstring).
+mcp.tool()(pixeltable_init)
 mcp.tool()(pixeltable_create_table)
 mcp.tool()(pixeltable_drop_table)
 mcp.tool()(pixeltable_create_view)
@@ -255,6 +266,10 @@ mcp.tool()(pixeltable_create_type)
 mcp.tool()(pixeltable_set_datastore)
 mcp.tool()(pixeltable_search_docs)
 
+# Project scaffolding (pixeltable-new wrappers)
+mcp.tool()(pixeltable_scaffold_project)
+mcp.tool()(pixeltable_list_project_templates)
+
 # REPL and interactive functions
 mcp.tool()(execute_python)
 mcp.tool()(introspect_function)
@@ -267,6 +282,10 @@ mcp.tool()(install_package)
 def display_in_browser(content_type: str, data: Any, title: str = None) -> Dict[str, Any]:
     """Send content to browser canvas for display.
 
+    The canvas is OPTIONAL. To enable it: install the `canvas` extra
+    (`uv pip install 'mcp-server-pixeltable-developer[canvas]'`) and set
+    `PIXELTABLE_MCP_CANVAS=1` before starting the server.
+
     Args:
         content_type: Type of content ('image', 'text', 'html', 'table', etc.)
         data: The content data to display
@@ -277,7 +296,7 @@ def display_in_browser(content_type: str, data: Any, title: str = None) -> Dict[
         title: Optional title to display above the content
 
     Returns:
-        Success status
+        Success status (or a clear error if the canvas isn't enabled).
 
     Example:
         display_in_browser('image', 'data:image/png;base64,...')
@@ -285,6 +304,14 @@ def display_in_browser(content_type: str, data: Any, title: str = None) -> Dict[
         display_in_browser('table', [{'name': 'Alice', 'age': 30}], title='User Data')
         display_in_browser('mermaid', 'graph TD...', title='Schema DAG')
     """
+    if not _canvas_enabled():
+        return {
+            "success": False,
+            "error": (
+                "Canvas is not enabled. Set PIXELTABLE_MCP_CANVAS=1 and install the "
+                "`canvas` extra (fastapi + uvicorn) before starting the MCP server."
+            ),
+        }
     try:
         # Convert file:// URLs to /media/ URLs for serving
         processed_data = data
@@ -342,7 +369,7 @@ def computer_vision_pipeline() -> str:
 
 @mcp.prompt()
 def rag_pipeline() -> str:
-    """Build a RAG pipeline: document ingestion, chunking with DocumentSplitter, embedding generation, and similarity search."""
+    """Build a RAG pipeline: document ingestion, chunking via document_splitter, embedding indexes, and similarity search."""
     return RAG_PIPELINE_PROMPT
 
 @mcp.prompt()
@@ -355,10 +382,40 @@ def audio_processing_pipeline() -> str:
     """Build an audio processing pipeline: transcription with Whisper, LLM-based analysis, and semantic search over spoken content."""
     return AUDIO_PROCESSING_PROMPT
 
+@mcp.prompt()
+def tool_calling_agent_pipeline() -> str:
+    """Production tool-calling agent: pxt.tools + invoke_tools + parallel RAG retrieval as a computed-column chain (no while-loops)."""
+    return TOOL_CALLING_AGENT_PROMPT
+
+@mcp.prompt()
+def agent_with_memory_pipeline() -> str:
+    """Agent with persistent chat history and a memory bank: user-scoped recall queries, save_memory tool, optional pxt.mcp_udfs."""
+    return AGENT_WITH_MEMORY_PROMPT
+
+@mcp.prompt()
+def video_rag_agent_pipeline() -> str:
+    """Video RAG agent: frame view via frame_iterator, CLIP + transcript indexes, search queries exposed as agent tools."""
+    return VIDEO_RAG_AGENT_PROMPT
+
+@mcp.prompt()
+def agentic_patterns_guide() -> str:
+    """Reference card: six agentic patterns (chaining, routing, parallelization, tool use, evaluator-optimizer, orchestrator-worker) as Pixeltable tables."""
+    return AGENTIC_PATTERNS_PROMPT
+
+@mcp.prompt()
+def ml_data_pipeline() -> str:
+    """ML data pipeline: ingest -> enrich -> curate -> snapshot -> export to PyTorch / Parquet / pandas (with retrieval UDFs)."""
+    return ML_DATA_PIPELINE_PROMPT
+
 
 # ===========================================================================
 # Entry point
 # ===========================================================================
+
+def _canvas_enabled() -> bool:
+    """True if PIXELTABLE_MCP_CANVAS is set to a truthy value."""
+    return os.environ.get('PIXELTABLE_MCP_CANVAS', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
 
 def main():
     """Start the Pixeltable MCP server."""
@@ -368,9 +425,21 @@ def main():
         # Disable Pixeltable console output to prevent JSON parsing issues
         os.environ['PIXELTABLE_DISABLE_STDOUT'] = '1'
 
-        # Start canvas server in background thread
-        run_canvas_server_thread(port=7777)
-        logger.info("Canvas server started on http://localhost:7777/canvas")
+        # Canvas startup is opt-in: requires PIXELTABLE_MCP_CANVAS=1 and the
+        # `canvas` extra (fastapi + uvicorn) to be installed. Without those,
+        # display_in_browser returns a clear error instead of crashing startup.
+        if _canvas_enabled():
+            port = int(os.environ.get('PIXELTABLE_MCP_CANVAS_PORT', '7777'))
+            started = run_canvas_server_thread(port=port)
+            if started:
+                logger.info("Canvas server started on http://localhost:%d/canvas", port)
+            else:
+                logger.info(
+                    "PIXELTABLE_MCP_CANVAS=1 but the canvas extra is not installed; "
+                    "skipping. Install: `uv pip install 'mcp-server-pixeltable-developer[canvas]'`."
+                )
+        else:
+            logger.info("Canvas disabled (set PIXELTABLE_MCP_CANVAS=1 to enable display_in_browser)")
 
         logger.info("Pixeltable MCP server ready")
 

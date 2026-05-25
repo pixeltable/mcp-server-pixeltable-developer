@@ -238,9 +238,33 @@ def pixeltable_list_functions() -> Dict[str, Any]:
 
 
 def pixeltable_get_help() -> Dict[str, Any]:
-    """Get comprehensive help and overview of Pixeltable concepts and workflows."""
+    """Get comprehensive help and overview of Pixeltable concepts and workflows.
+
+    The `pitfalls` and `references` fields mirror the pixeltable-skill anti-patterns
+    so MCP clients reading this resource get the same guardrails as users following
+    the official skill.
+    """
     return {
         "success": True,
+        "pitfalls": [
+            "There is no `openai.vision` -- use `openai.chat_completions` with `image_url` content blocks.",
+            "Cast to `pxt.String` before `add_embedding_index` on AI function outputs (`.text.astype(pxt.String)`).",
+            "`if_exists='ignore'` does NOT fix a broken computed column -- drop and recreate it.",
+            "Use `frame_iterator` from `pixeltable.functions.video` (NOT `pixeltable.iterators.FrameIterator`).",
+            "Use `column.similarity(string=query)` (keyword), never positional.",
+            "Use `embedding=` (not `string_embed=`) in `add_embedding_index`.",
+            "Don't write `for row in ...` loops calling AI models -- use computed columns.",
+            "Don't install a separate vector DB -- `add_embedding_index` + `.similarity()` IS the vector store.",
+            "Don't write `while not done:` agent loops -- use a table with a computed-column chain triggered by insert.",
+            "Use `pxt.Required[pxt.String]` (or `'Required[String]'`) for primary keys; nullable types make poor PKs.",
+        ],
+        "references": {
+            "skill": "https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/SKILL.md",
+            "anti_patterns": "https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/references/anti-patterns.md",
+            "providers": "https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/references/providers.md",
+            "starter_kit": "https://github.com/pixeltable/pixeltable-starter-kit",
+            "docs": "https://docs.pixeltable.com/",
+        },
         "overview": {
             "what_is_pixeltable": (
                 "Pixeltable is a Python framework for multimodal AI applications that provides "
@@ -304,9 +328,9 @@ def pixeltable_get_help() -> Dict[str, Any]:
             "3_rag_pipeline": [
                 "Create table with pxt.Document column",
                 "Insert documents (PDFs, text files)",
-                "Add embedding column: 'sentence_transformers.embed(text)'",
-                "Create embedding index for vector search",
-                "Query with similarity search"
+                "Chunk via view: iterator=document_splitter(t.document, separators='token_limit', limit=300)",
+                "Add embedding index: huggingface.sentence_transformer.using(model_id='all-MiniLM-L6-v2')",
+                "Query with column.similarity(string=query) + order_by + limit"
             ],
             "4_video_analysis": [
                 "Create table with pxt.Video column",
@@ -354,77 +378,68 @@ def pixeltable_get_help() -> Dict[str, Any]:
 
 
 def pixeltable_list_tools() -> Dict[str, Any]:
-    """List all available Pixeltable MCP tools with their descriptions."""
+    """List the MCP tools actually registered on the live FastMCP server.
+
+    Introspects ``server.mcp._tool_manager.list_tools()`` so the resource always
+    matches what clients see (no risk of drift between this list and
+    ``server.py`` / ``list_tools.py``).
+    """
     try:
-        import inspect
-        import mcp_server_pixeltable_stio.core.pixeltable_functions as pf
-        import mcp_server_pixeltable_stio.core.repl_functions as rf
+        # Deferred import: avoid circular load (server imports core/helpers).
+        from mcp_server_pixeltable_stio.server import mcp as _mcp
 
-        pixeltable_funcs = [
-            (name, func) for name, func in inspect.getmembers(pf)
-            if name.startswith('pixeltable_') and callable(func)
-        ]
+        tool_manager = getattr(_mcp, '_tool_manager', None)
+        if tool_manager is None or not hasattr(tool_manager, 'list_tools'):
+            return {
+                "success": False,
+                "error": "FastMCP tool manager unavailable; cannot enumerate live tools.",
+            }
 
-        repl_funcs = [
-            (name, func) for name, func in inspect.getmembers(rf)
-            if callable(func) and not name.startswith('_')
-        ]
-
+        # Categories drive presentation; tools that don't match land in 'Other'.
+        # Keywords are matched as exact name suffixes (after the pixeltable_ prefix
+        # is stripped) or as the full tool name for REPL/logging helpers.
         categories = {
-            "Table Management": ["create_table", "get_table", "list_tables", "drop_table", "query_table", "get_table_schema"],
-            "Data Operations": ["insert_data", "add_computed_column", "create_view", "create_snapshot", "create_replica"],
-            "Directory Management": ["create_dir", "drop_dir", "list_dirs", "ls", "move"],
-            "Configuration": ["set_datastore", "get_datastore", "configure_logging", "get_version", "list_tools"],
-            "AI/ML Integration": ["create_udf", "create_array", "create_tools", "connect_mcp", "query"],
-            "Data Types": ["create_type"],
+            "Table Management": ["create_table", "drop_table", "create_view", "create_snapshot"],
+            "Data Operations": ["create_replica", "query_table", "insert_data", "add_computed_column", "query"],
+            "Directory Management": ["create_dir", "drop_dir", "move"],
+            "Configuration": ["configure_logging", "set_datastore"],
+            "AI/ML Integration": ["create_udf", "create_array", "create_tools", "connect_mcp"],
             "Dependencies": ["check_dependencies", "install_dependency"],
-            "REPL & Debug": ["execute_python", "introspect_function", "list_available_functions", "log_bug", "log_missing_feature", "generate_bug_report"],
-            "Utilities": ["list_functions", "get_types", "system_diagnostics", "search_docs"],
+            "Data Types": ["create_type"],
+            "Documentation": ["search_docs"],
+            "REPL & Debug": ["execute_python", "introspect_function", "list_available_functions", "install_package"],
+            "Bug Logging": ["log_bug", "log_missing_feature", "log_success", "generate_bug_report", "get_session_summary"],
+            "Display": ["display_in_browser"],
+            "Scaffolding": ["scaffold_project", "list_project_templates"],
         }
 
         categorized: Dict[str, list] = {cat: [] for cat in categories}
         categorized["Other"] = []
-
-        all_funcs = pixeltable_funcs + repl_funcs
-
-        for name, func in all_funcs:
-            doc = ""
-            if func.__doc__:
-                lines = func.__doc__.strip().split('\n')
-                for line in lines:
-                    line = line.strip()
-                    if line:
-                        doc = line
-                        break
-
-            found = False
-            for cat, keywords in categories.items():
-                if any(kw in name.lower() for kw in keywords):
-                    categorized[cat].append({
-                        "name": name,
-                        "description": doc or "No description available"
-                    })
-                    found = True
-                    break
-
-            if not found:
-                categorized["Other"].append({
-                    "name": name,
-                    "description": doc or "No description available"
-                })
-
-        result = {}
         total_count = 0
-        for cat, tools in categorized.items():
-            if tools:
-                result[cat] = sorted(tools, key=lambda x: x["name"])
-                total_count += len(tools)
+
+        for tool in tool_manager.list_tools():
+            name = getattr(tool, 'name', None) or getattr(tool, 'fn', None).__name__
+            description = (getattr(tool, 'description', None) or '').strip().split('\n', 1)[0]
+            short_name = name[len('pixeltable_'):] if name.startswith('pixeltable_') else name
+            bucket = "Other"
+            for cat, keywords in categories.items():
+                if short_name in keywords or name in keywords:
+                    bucket = cat
+                    break
+            categorized[bucket].append({
+                "name": name,
+                "description": description or "No description available",
+            })
+            total_count += 1
+
+        result = {cat: sorted(tools, key=lambda x: x["name"])
+                  for cat, tools in categorized.items() if tools}
 
         return {
             "success": True,
             "total_tools": total_count,
             "categories": result,
-            "message": f"Found {total_count} tools across {len(result)} categories"
+            "message": f"Found {total_count} tools across {len(result)} categories",
         }
 
     except Exception as e:

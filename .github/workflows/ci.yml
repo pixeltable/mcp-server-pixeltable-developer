@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies (with test + canvas extras)
+        run: uv sync --extra test --extra canvas
+
+      - name: Inventory primitives (smoke)
+        run: uv run python list_tools.py
+
+      - name: Run fast test suite
+        run: uv run pytest -q
+
+      - name: Run slow test suite (real Pixeltable smoke)
+        # Slow tests initialize a real Pixeltable catalog in a tmpdir; skip the
+        # 3.10 leg from this expensive step to keep CI quick if it ever drags.
+        if: matrix.python-version != '3.10'
+        env:
+          PIXELTABLE_DISABLE_STDOUT: "1"
+        run: uv run pytest --run-slow -q
