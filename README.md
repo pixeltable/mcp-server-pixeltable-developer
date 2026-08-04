@@ -17,6 +17,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 **Claude Code (easiest)** — just say:
 > "Install https://github.com/pixeltable/mcp-server-pixeltable-developer as a uv tool and add it to your MCPs"
 
+**One-shot (no install):**
+
+```bash
+uvx --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer mcp-server-pixeltable-developer
+```
+
 **Manual install:**
 
 ```bash
