@@ -1,255 +1,204 @@
-# Pixeltable MCP Server (Developer Edition)
+# Pixeltable Developer MCP Server
 
-Multimodal AI data infrastructure as an MCP server. **35 tools · 13 resources · 11 prompts** for catalog management, AI/ML pipelines, dependency management, project scaffolding, and an interactive REPL.
+A local Model Context Protocol server for building, inspecting, and operating
+[Pixeltable](https://pixeltable.com/) applications. Version 0.2 follows the
+application-first workflow in [pixeltable-skill 2.8.3](https://github.com/pixeltable/pixeltable-skill/blob/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/SKILL.md): generate one `app.py`, apply its schema, and serve its routes with the `pxt` CLI.
 
-Uses **sync endpoints** + **uvloop** for best performance with Pixeltable **≥ 0.6.3** (see `pyproject.toml`). Aligned with the [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill) and [pixeltable-starter-kit](https://github.com/pixeltable/pixeltable-starter-kit) conventions (`pxt.mcp_udfs`, `FastAPIRouter`, `return_rows=True`, `pxt.Required[T]`, `pxt.Array[T]`).
+## Compatibility
 
----
+| Component | Supported line |
+|---|---|
+| Python | 3.11 or newer |
+| Pixeltable | `>=0.7.6,<0.8` with the `serve` extra |
+| MCP Python SDK | `>=2.2,<3` |
+| Pixeltable skill | 2.8.3 |
+| Production transport | local `stdio` |
 
-## Quick Start
+The server is a **beta developer tool**. It runs with the permissions of the
+process that launched it and can mutate the selected Pixeltable catalog. Point
+`PIXELTABLE_MCP_PROJECT_ROOT` at the application directory and `PIXELTABLE_HOME`
+at the intended catalog before startup. Both locations are fixed for the life of
+the process. Use a separate catalog for evaluation and automated tests.
 
-Requires [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
+## Install and connect
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Claude Code (easiest)** — just say:
-> "Install https://github.com/pixeltable/mcp-server-pixeltable-developer as a uv tool and add it to your MCPs"
-
-**One-shot (no install):**
-
-```bash
-uvx --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer mcp-server-pixeltable-developer
-```
-
-**Manual install:**
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/), then install the server:
 
 ```bash
 uv tool install --from git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git mcp-server-pixeltable-developer
-claude mcp add pixeltable mcp-server-pixeltable-developer   # Claude Code
+mcp-server-pixeltable-developer --version
 ```
 
-If `uv` warns that `~/.local/bin` is not on your `PATH`, run `uv tool update-shell` (or add that directory to `PATH`) so `mcp-server-pixeltable-developer` is found. Check with `mcp-server-pixeltable-developer --version`.
-
-**From source:**
+For reproducible development from a clone:
 
 ```bash
-git clone https://github.com/pixeltable/mcp-server-pixeltable-developer && cd mcp-server-pixeltable-developer
-uv sync
+git clone https://github.com/pixeltable/mcp-server-pixeltable-developer.git
+cd mcp-server-pixeltable-developer
+uv sync --frozen --extra test
 ```
 
-### Client Configuration
-
-<details><summary><strong>Claude Desktop</strong></summary>
+Configure a client to launch the server over `stdio`. Replace the repository,
+application project, and catalog paths with absolute paths:
 
 ```json
 {
   "mcpServers": {
     "pixeltable": {
-      "command": "mcp-server-pixeltable-developer",
-      "env": {
-        "PIXELTABLE_HOME": "/Users/{you}/.pixeltable",
-        "PIXELTABLE_FILE_CACHE_SIZE_G": "10"
-      }
-    }
-  }
-}
-```
-
-From source — use `"command": "uv"` with `"args": ["run", "--directory", "{repo}", "python", "-m", "mcp_server_pixeltable_stio"]`.
-
-</details>
-
-<details><summary><strong>Cursor</strong></summary>
-
-**User config** — `~/.cursor/mcp.json` (applies to all workspaces):
-
-```json
-{
-  "mcpServers": {
-    "pixeltable-developer": {
-      "command": "mcp-server-pixeltable-developer",
-      "env": {
-        "PIXELTABLE_HOME": "/Users/you/.pixeltable"
-      }
-    }
-  }
-}
-```
-
-If Cursor reports **command not found**, use the full path from `uv tool update-shell` / `which mcp-server-pixeltable-developer`, e.g. `"command": "/Users/you/.local/bin/mcp-server-pixeltable-developer"`.
-
-**Develop this repo from source** — optional project `.cursor/mcp.json` so the server runs from your clone (replace the path):
-
-```json
-{
-  "mcpServers": {
-    "pixeltable-developer": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/mcp-server-pixeltable-developer", "python", "-m", "mcp_server_pixeltable_stio"],
+      "args": [
+        "run",
+        "--directory",
+        "/absolute/path/to/mcp-server-pixeltable-developer",
+        "mcp-server-pixeltable-developer"
+      ],
       "env": {
-        "PIXELTABLE_HOME": "/Users/you/.pixeltable"
+        "PIXELTABLE_MCP_PROJECT_ROOT": "/absolute/path/to/pixeltable-app",
+        "PIXELTABLE_HOME": "/absolute/path/to/.pixeltable"
       }
     }
   }
 }
 ```
 
-Do not define the same server name twice (user + project) unless you intend to run two entries.
+Restart the client after changing its MCP configuration. Keep one server
+process per catalog when performing schema or service mutations.
 
-</details>
+## Default interface
 
-Restart your client after configuration changes.
+Version 0.2 exposes a focused interface instead of mirroring the whole
+Pixeltable Python API.
 
----
+### Tools
 
-## Testing
+| Area | Tools |
+|---|---|
+| Inspect | `pixeltable_list_catalog`, `pixeltable_describe`, `pixeltable_rows`, `pixeltable_get_row`, `pixeltable_errors` |
+| Data | `pixeltable_insert_rows`, `pixeltable_recompute` |
+| App scaffold | `pixeltable_scaffold_app` |
+| Schema lifecycle | `pixeltable_schema_check`, `pixeltable_schema_diff`, `pixeltable_schema_update`, `pixeltable_schema_prune` |
+| Service lifecycle | `pixeltable_service_check`, `pixeltable_service_diff`, `pixeltable_service_update`, `pixeltable_service_list`, `pixeltable_service_stop`, `pixeltable_service_prune` |
 
-Use a **dedicated** `PIXELTABLE_HOME` for testing so you do not touch other catalogs.
+Read tools declare read-only MCP annotations. Mutation tools declare their
+write and destructive behavior. Arguments and results use typed schemas, and
+recoverable failures are returned as MCP tool errors so clients can retry with
+corrected input.
 
-### MCP Inspector (interactive)
+### Resources
 
-From a clone, after `uv sync`:
+| URI | Purpose |
+|---|---|
+| `pixeltable://status` | Server, dependency, transport, catalog, and unsafe-mode status |
+| `pixeltable://catalog` | Current catalog inventory |
+| `pixeltable://guidance/app` | Pixeltable 0.7.6 application workflow |
+| `pixeltable://guidance/cloud` | Cloud preparation guidance; it does not deploy resources |
+
+### Prompts
+
+- `pixeltable_build_app`
+- `pixeltable_build_rag`
+- `pixeltable_build_agent`
+- `pixeltable_debug_computation`
+
+The prompts are short task guides aligned with pixeltable-skill 2.8.3. The
+skill remains the detailed source for provider output shapes, multimodal views,
+indexes, tool calling, serving, debugging, and Cloud workflows.
+
+## Unsafe mode
+
+Host-code execution, package installation, and browser display are disabled by
+default. A trusted local user can opt in before starting the server:
 
 ```bash
-export PIXELTABLE_HOME="$HOME/.pixeltable-mcp-test"
-uv run mcp dev src/mcp_server_pixeltable_stio/server.py:mcp
+export PIXELTABLE_MCP_ENABLE_UNSAFE=1
 ```
 
-This starts the server and opens the **MCP Inspector** in your browser so you can invoke tools, read resources, and try prompts without an IDE.
+This adds:
 
-**Quick checks:** tool `pixeltable_check_dependencies` with expression `openai.chat_completions`; tool `execute_python` with `print(pxt.__version__)`; resource `pixeltable://version`.
+- `pixeltable_unsafe_execute_python`
+- `pixeltable_unsafe_install_package`
+- `pixeltable_unsafe_display`
 
-### Cursor
+These tools are available only on `stdio`. They can execute arbitrary Python,
+change the server environment, read files available to the server process, and
+render untrusted content. Enable them only for a trusted, local MCP client and
+a disposable development environment. Do not expose unsafe mode through an
+HTTP transport.
 
-Add `PIXELTABLE_HOME` under `env` in `.cursor/mcp.json` (see **Client Configuration** above). Restart Cursor, confirm the server connects, then run a simple tool from the MCP panel.
+The repository may use an in-process or HTTP harness in tests. HTTP is not a
+supported production transport for version 0.2. A future HTTP release must add
+authorization, concurrency and request limits, origin and host validation,
+per-principal isolation, and an explicit threat model before it is supported.
 
-### CLI sanity (no JSON-RPC)
+## Recommended Pixeltable workflow
+
+Start an application with the current Pixeltable CLI:
 
 ```bash
-mcp-server-pixeltable-developer --version
+pip install 'pixeltable[serve]>=0.7.6,<0.8'
+pxt init
+pxt service example --out app.py
+pxt schema check app.py
+pxt schema diff app.py my_app
+pxt schema update app.py my_app
+pxt service check app.py
+pxt service update app.py my_app
+pxt service list
+```
+
+`my_app` is a catalog directory. It is not a filesystem directory. Edit
+`app.py` and apply the schema again when the model changes. Apply the service
+again after route changes. Use `pxt service list` to discover the assigned URL.
+
+The application file should declare `TableModel` classes and, when HTTP routes
+are needed, a `FastAPIRouter`. Stored columns use annotations. Computed columns
+use assignments. Types are non-nullable by default; write `T | None` for an
+optional column. Do not use `pxt.Required`.
+
+Schema updates intentionally require a review step. `schema_check` validates
+the file, `schema_diff` previews catalog changes, and `schema_update` applies
+them. Prune operations are separate because they can remove catalog objects.
+Changing an existing computed-column expression in place is unsupported by
+Pixeltable; rename the column, or drop and re-add it in separate updates.
+
+For Cloud, prepare the same `app.py`, set `PIXELTABLE_API_KEY`, configure the
+target `pxt://org:db`, and review `pixeltable://guidance/cloud`. The MCP server
+does not create paid resources or deploy to Cloud automatically.
+
+## Develop and verify
+
+Use a disposable catalog:
+
+```bash
+export PIXELTABLE_MCP_PROJECT_ROOT="$PWD"
+export PIXELTABLE_HOME="$(mktemp -d)/catalog"
+uv sync --frozen --extra test
+uv run pytest -q
+PIXELTABLE_DISABLE_STDOUT=1 uv run pytest --run-slow -q
 uv run python list_tools.py
+./scripts/run-conformance.sh
 ```
 
-`--version` / `--help` exit immediately. `list_tools.py` only prints registered tools, resources, and prompts (import check, not a full MCP session).
+Run the MCP Inspector only as a local test harness:
 
----
-
-## Tools (35)
-
-| Category | Tools |
-|---|---|
-| **Init** | `init` (recovery for circular env init) |
-| **Tables** | `create_table` · `drop_table` · `create_view` · `create_snapshot` |
-| **Data** | `create_replica` · `query_table` · `insert_data` · `query` · `add_computed_column` |
-| **Directories** | `create_dir` · `drop_dir` · `move` |
-| **Config** | `configure_logging` · `set_datastore` |
-| **AI/ML** | `create_udf` · `create_array` · `create_tools` · `connect_mcp` (wraps `pxt.mcp_udfs`) |
-| **Deps** | `check_dependencies` · `install_dependency` |
-| **Types** | `create_type` (Image, Video, Audio, Array[Float], `Required[T]`, …) |
-| **Docs** | `search_docs` |
-| **Scaffolding** | `scaffold_project` · `list_project_templates` (wraps `pixeltable-new`) |
-| **REPL** | `execute_python` · `introspect_function` · `list_available_functions` · `install_package` |
-| **Logging** | `log_bug` · `log_missing_feature` · `log_success` · `generate_bug_report` · `get_session_summary` |
-| **Display** | `display_in_browser` (canvas-extra + `PIXELTABLE_MCP_CANVAS=1`) |
-
-All tools are prefixed `pixeltable_` (except REPL/logging helpers). Full docstrings available via `introspect_function`. `pixeltable://tools` always reflects the live FastMCP registration.
-
-`create_view` accepts `iterator` (`frame_iterator` / `document_splitter` / `audio_splitter` / `string_splitter`) + `iterator_kwargs` so frame and chunk views don't require dropping into `execute_python`.
-
-## Resources (13)
-
-| URI | What it returns |
-|---|---|
-| `pixeltable://tables` | All tables with count |
-| `pixeltable://tables/{path}` | Info about a table / view / snapshot |
-| `pixeltable://tables/{path}/schema` | Column schema |
-| `pixeltable://directories` | All directories |
-| `pixeltable://ls` / `pixeltable://ls/{path}` | Directory listing |
-| `pixeltable://version` | Pixeltable version |
-| `pixeltable://config/datastore` | Datastore config |
-| `pixeltable://types` | Available data types |
-| `pixeltable://functions` | Registered Pixeltable functions |
-| `pixeltable://tools` | MCP tool list (introspects the live FastMCP server) |
-| `pixeltable://help` | Workflow guidance + pitfalls |
-| `pixeltable://diagnostics` | System & dependency diagnostics |
-
-## Prompts (11)
-
-Core: `pixeltable_usage_guide` (now leads with pitfalls) · `getting_started` · `computer_vision_pipeline` · `rag_pipeline` · `video_analysis_pipeline` · `audio_processing_pipeline`
-
-Agent / data (from [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill)): `tool_calling_agent_pipeline` · `agent_with_memory_pipeline` · `video_rag_agent_pipeline` · `agentic_patterns_guide` · `ml_data_pipeline`
-
----
-
-## Examples
-
-```text
-Create a table called movies with title, year, and rating columns → insert sample data → query ratings above 8.5
-
-Add a computed column that runs YOLOX object detection on every image
-
-Check what deps I need for openai.chat_completions(...) → install them
-
-execute_python("print(pxt.list_tables())")
+```bash
+uv run mcp dev src/mcp_server_pixeltable_developer/server.py:mcp
 ```
 
----
+Before release, also run the latest-dependency compatibility job, the MCP
+in-memory contract tests, the subprocess `stdio` smoke test, lint, type checks,
+and package build verification described in the review report.
 
 ## Documentation
 
-- [Pixeltable docs](https://docs.pixeltable.com/)
-- [pixeltable-skill](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/SKILL.md) — task router, [critical anti-patterns](https://github.com/pixeltable/pixeltable-skill/blob/main/skills/pixeltable-skill/references/anti-patterns.md) (`openai.vision`, `FrameIterator`, positional `.similarity`, etc.), and workflow examples aligned with current Pixeltable
-- [pixeltable-starter-kit](https://github.com/pixeltable/pixeltable-starter-kit) — `FastAPIRouter` / `pxt serve` patterns and seven app templates; use `pixeltable_scaffold_project` to bootstrap them
-- Consumer side of MCP: `pxt.mcp_udfs(url)` (Pixeltable 0.6.x+) pulls this server's tools into a Pixeltable agent; expose them with `pxt.tools(local_udf, *mcp_tools)` and `invoke_tools`
+- [0.1.0 evidence review](docs/review-0.1.0.md)
+- [0.2.0 implementation review](docs/review-0.2.0.md)
+- [Migration from 0.1 to 0.2](docs/migration-0.1-to-0.2.md)
+- [Agent evaluation protocol](evals/README.md)
+- [Pixeltable documentation](https://docs.pixeltable.com/)
+- [Pixeltable get started](https://www.pixeltable.com/get-started.md)
+- [Pixeltable LLM reference](https://www.pixeltable.com/llms.txt)
+- [MCP Python SDK 2 documentation](https://py.sdk.modelcontextprotocol.io/v2/)
 
----
+## License
 
-## Architecture
-
-```
-src/mcp_server_pixeltable_stio/
-  server.py            FastMCP server, tool/resource/prompt registration, uvloop, canvas gate
-  core/
-    tables.py          Table CRUD, views (iterator support), snapshots, replicas, queries,
-                       computed columns (eval context exposes all skill providers),
-                       _resolve_pxt_type (Required[T] / Array[T] / dict form)
-    directories.py     Directory CRUD, listing, moving
-    dependencies.py    Dependency checking, unified installer, diagnostics
-    udf.py             UDF creation, type system, pxt.tools / pxt.mcp_udfs wrappers
-    helpers.py         Config, version, docs search, live pixeltable://tools introspection
-    resources.py       Read-only MCP resource handlers
-    scaffold.py        pixeltable-new wrappers (module first, uvx fallback)
-    canvas_server.py   Optional browser canvas (lazy-imported; opt-in via env)
-  prompt.py            Prompt templates (11 prompts covering core flows + 5 skill agent flows)
-  repl_functions.py    Persistent Python REPL, introspection, package management
-tests/                 Fast pytest suite + slow smoke (--run-slow uses tmp PIXELTABLE_HOME)
-.github/workflows/     CI: matrix py3.10/3.11/3.12, list_tools.py + pytest
-```
-
-## Optional canvas display
-
-The `display_in_browser` tool requires:
-
-1. Install the canvas extra: `uv pip install 'mcp-server-pixeltable-developer[canvas]'` (adds FastAPI + uvicorn).
-2. Start the MCP server with `PIXELTABLE_MCP_CANVAS=1` (override the port with `PIXELTABLE_MCP_CANVAS_PORT`).
-
-Without those, the tool returns a clear error and core MCP traffic is unaffected.
-
-## Project scaffolding
-
-`pixeltable_list_project_templates` and `pixeltable_scaffold_project` wrap [`pixeltable-new`](https://github.com/pixeltable/pixeltable-new). The MCP imports `pixeltable_new.new` if installed, otherwise shells out to `uvx pixeltable-new --json`. Patterns: `serving` / `backend` / `batch`. Templates include `multimodal-rag`, `agent`, `video-intel`, `audio-intel`, `data-lab`, `content-pipeline`, `full-stack-showcase`.
-
----
-
-## Troubleshooting
-
-- **Restart your client** after any config change
-- **Python 3.10+** and **`uv`** are required
-- **`command not found` after `uv tool install`:** ensure `~/.local/bin` is on `PATH` (`uv tool update-shell`) or invoke via full path; confirm with `mcp-server-pixeltable-developer --version`
-- Check that `PIXELTABLE_HOME` points to a valid directory
-- **Circular env initialization detected:** call the `pixeltable_init` tool to clear the stale state, or re-create your `PIXELTABLE_HOME`
-- **Canvas error from `display_in_browser`:** install the `canvas` extra and set `PIXELTABLE_MCP_CANVAS=1` (see above)
-- Use `log_bug(...)` / `generate_bug_report()` for structured issue tracking
-- File issues at [github.com/pixeltable/mcp-server-pixeltable-developer](https://github.com/pixeltable/mcp-server-pixeltable-developer/issues)
+Apache-2.0. See [LICENSE](LICENSE).

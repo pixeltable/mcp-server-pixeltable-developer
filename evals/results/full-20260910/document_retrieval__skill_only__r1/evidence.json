@@ -1,0 +1,118 @@
+{
+  "boundaries": [],
+  "codex_returncode": 1,
+  "codex_timed_out": false,
+  "condition": "skill_only",
+  "elapsed_seconds": 4.02300845895661,
+  "final_sha256": null,
+  "guidance_sha256": "8c9fec8e801ed6d0f66667ab6086ed7bc81d3fb85cbf8e7542546da052020966",
+  "prompt_sha256": "595814353ce6af449cadd05fcb9397ee90d9cd5afb85e60f91fec300a001d762",
+  "repetition": 1,
+  "scenario": "document_retrieval",
+  "schema_version": 1,
+  "settings": {
+    "approval": "approve-for-me",
+    "codex_cli": "codex-cli 0.153.4",
+    "ephemeral": true,
+    "ignore_rules": true,
+    "ignore_user_config": true,
+    "mcp": "2.2.0",
+    "model": "gpt-6-astra",
+    "pixeltable": "0.7.6",
+    "prompt_wrapper": 1,
+    "python": "3.11.13",
+    "reasoning_effort": "low",
+    "sandbox": "workspace-write"
+  },
+  "settings_sha256": "2e091eb4d143a60d586e72175f884aa643e9ef3668f04337bb0ef07e4c3b7a69",
+  "source_manifest": "sources/retrievals.json",
+  "source_manifest_sha256": "99b411744a462a2ad573b3435c2c6446cbdbb8356b9028cca92f697f560de8b6",
+  "started_at": "2026-09-10T21:13:30.609115+00:00",
+  "stderr_bytes": 826,
+  "stderr_sha256": "ed8845cc97a0982f16a9f55e3389fa751427697f1eb0957c5fa23e132724d9c0",
+  "stderr_truncated": false,
+  "tool_calls": 0,
+  "tool_calls_by_type": {},
+  "tool_limit_exceeded": false,
+  "transcript_bytes": 293,
+  "transcript_sha256": "469210ac1211696e4112eb2fe6eb95b4b48abab8034cb3f0f2cb7b6fc5679db3",
+  "transcript_truncated": false,
+  "trial_id": "document_retrieval__skill_only__r1",
+  "verifier": {
+    "boundaries": [],
+    "checks": [
+      {
+        "detail": "missing: app.py",
+        "name": "required artifacts",
+        "passed": false
+      },
+      {
+        "detail": "no unsupported APIs",
+        "name": "supported APIs",
+        "passed": true
+      },
+      {
+        "detail": "no unnecessary frameworks or stores",
+        "name": "dependency discipline",
+        "passed": true
+      },
+      {
+        "detail": "missing app.py",
+        "name": "scenario source shape",
+        "passed": false
+      },
+      {
+        "detail": "copied 11 files into clean verification project",
+        "name": "workspace copied",
+        "passed": true
+      },
+      {
+        "detail": "returncode=0; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'init', '--json']; stderr=",
+        "name": "command 1",
+        "passed": true
+      },
+      {
+        "detail": "returncode=1; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'schema', 'check', 'app.py', '--json']; stderr=pxt schema check: file not found: app.py\n",
+        "name": "command 2",
+        "passed": false
+      }
+    ],
+    "commands": [
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "init",
+          "--json"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\n  \"project_root\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-document_retrieval-ev6olsge/project\",\n  \"config_file\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-document_retrieval-ev6olsge/project/pixeltable.toml\",\n  \"created\": true,\n  \"unusable_dirs\": []\n}\n"
+      },
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "schema",
+          "check",
+          "app.py",
+          "--json"
+        ],
+        "returncode": 1,
+        "stderr": "pxt schema check: file not found: app.py\n",
+        "stdout": ""
+      }
+    ],
+    "critical_defect": true,
+    "executable_correctness": 1,
+    "passed": false,
+    "recovery": null,
+    "scenario": "document_retrieval",
+    "schema_version": 1,
+    "task_completion": 0,
+    "unnecessary_dependency_count": 0,
+    "unsupported_api_count": 0
+  },
+  "verifier_returncode": 1,
+  "verifier_stderr": "",
+  "verifier_stdout": "{\"scenario\": \"document_retrieval\", \"passed\": false, \"task_completion\": 0, \"executable_correctness\": 1}\n",
+  "verifier_timed_out": false
+}

@@ -45,6 +45,7 @@ coverage.xml
 # Virtual environments
 .env
 .venv
+.venv-*/
 env/
 venv/
 ENV/
@@ -78,6 +79,14 @@ Thumbs.db
 
 # Testing logs
 pixeltable_testing_logs/
+conformance-results/
+evals/results/*/sources/
+evals/results/*/*/workspace/
+evals/results/*/*/prompt.txt
+evals/results/*/*/transcript.jsonl
+evals/results/*/*/stderr.txt
+evals/results/*/*/final.txt
+evals/results/*/*/verifier.json
 
 # Sample data
 sample_data/

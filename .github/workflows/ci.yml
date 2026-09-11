@@ -3,9 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,17 +19,18 @@ jobs:
   test:
     name: pytest (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
           cache-dependency-glob: |
@@ -35,19 +40,163 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Sync dependencies (with test + canvas extras)
-        run: uv sync --extra test --extra canvas
+      - name: Sync locked dependencies
+        run: uv sync --frozen --python ${{ matrix.python-version }} --extra test --extra canvas
 
-      - name: Inventory primitives (smoke)
-        run: uv run python list_tools.py
-
-      - name: Run fast test suite
-        run: uv run pytest -q
-
-      - name: Run slow test suite (real Pixeltable smoke)
-        # Slow tests initialize a real Pixeltable catalog in a tmpdir; skip the
-        # 3.10 leg from this expensive step to keep CI quick if it ever drags.
-        if: matrix.python-version != '3.10'
+      - name: Run test suite
         env:
           PIXELTABLE_DISABLE_STDOUT: "1"
-        run: uv run pytest --run-slow -q
+        run: uv run --frozen pytest -q --run-slow
+
+  quality:
+    name: quality and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen --python 3.12 --extra test --extra canvas
+
+      - name: Lint and format check
+        run: |
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+
+      - name: Static type check
+        run: uv run --frozen pyright
+
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Verify clean-wheel installation
+        run: |
+          uv venv --python 3.12 .venv-wheel
+          uv pip install --python .venv-wheel/bin/python dist/*.whl
+          .venv-wheel/bin/mcp-server-pixeltable-developer --version
+          .venv-wheel/bin/python - <<'PY'
+          import mcp_server_pixeltable_developer
+          import mcp_server_pixeltable_stio
+
+          assert mcp_server_pixeltable_developer.__version__ == "0.2.0"
+          assert mcp_server_pixeltable_stio.__version__ == "0.2.0"
+          PY
+
+  minimum-bounds:
+    name: minimum Pixeltable and MCP bounds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install exact minimum runtime bounds
+        run: |
+          uv venv --python 3.11 .venv-minimum
+          uv pip install --python .venv-minimum/bin/python \
+            'mcp[cli]==2.2.0' \
+            'pixeltable[serve]==0.7.6' \
+            -e '.[test,canvas]'
+
+      - name: Verify exact versions
+        run: |
+          .venv-minimum/bin/python - <<'PY'
+          from importlib.metadata import version
+
+          assert version("mcp") == "2.2.0", version("mcp")
+          assert version("pixeltable") == "0.7.6", version("pixeltable")
+          PY
+
+      - name: Run test suite at minimum runtime bounds
+        env:
+          PIXELTABLE_DISABLE_STDOUT: "1"
+        run: .venv-minimum/bin/pytest -q --run-slow
+
+  fresh-resolution:
+    name: fresh dependency resolution
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Resolve without the repository lock
+        run: |
+          uv venv --python 3.12 .venv-fresh
+          uv pip install --python .venv-fresh/bin/python -e '.[test]'
+          .venv-fresh/bin/python -c "import importlib.metadata as m; print(m.version('pixeltable'), m.version('mcp'))"
+          PIXELTABLE_DISABLE_STDOUT=1 .venv-fresh/bin/pytest -q --run-slow
+
+  conformance:
+    name: MCP conformance (2026-07-28)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen --python 3.12 --extra test --extra canvas
+
+      - name: Run MCP conformance suites
+        run: scripts/run-conformance.sh
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: conformance-results
+          path: conformance-results/
+          if-no-files-found: warn
+
+  eval-artifacts:
+    name: validate 48-trial evaluation artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate evaluation manifest and result matrix
+        run: python3 evals/validate_results.py
+
+  release-evaluation-gate:
+    name: require completed agent evaluation for tags
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, quality, minimum-bounds, fresh-resolution, conformance, eval-artifacts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Require all 48 trials to be complete
+        run: python3 evals/validate_results.py --require-complete

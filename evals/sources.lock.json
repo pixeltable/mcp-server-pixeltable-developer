@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-10",
+  "environment": {
+    "mcp_server_baseline_commit": "5ae8063e07ea6ad1aa625039e20475986d7a7750",
+    "mcp_server_version_under_test": "0.2.0",
+    "mcp_python_sdk": "2.2.0",
+    "mcp_specification": "2026-07-28",
+    "pixeltable": "0.7.6",
+    "pixeltable_wheel_sha256": "9e6cdbe54f042b31786bede4a4cd4d68b361b31d75f34ea4e9c415146c901114",
+    "pixeltable_skill_commit": "f550e6ed757b48635e4f53900840f4e9a1fb4c93",
+    "pixeltable_skill_version": "2.8.3"
+  },
+  "sources": [
+    {
+      "id": "skill",
+      "condition": "skill",
+      "path": "skill/SKILL.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/SKILL.md",
+      "immutable": true,
+      "bytes": 11397,
+      "sha256": "f708535d7ef2421408465634d9f62339ab7865367873eb1f8a609d413eecfce3"
+    },
+    {
+      "id": "skill-anti-patterns",
+      "condition": "skill",
+      "path": "skill/references/anti-patterns.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/references/anti-patterns.md",
+      "immutable": true,
+      "bytes": 2114,
+      "sha256": "0415ec49bca21e4c04bb2a0116b30ef0080c956384532115ae2450f3087ff375"
+    },
+    {
+      "id": "skill-cli",
+      "condition": "skill",
+      "path": "skill/references/cli.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/references/cli.md",
+      "immutable": true,
+      "bytes": 13925,
+      "sha256": "6bc3b317294fb5abbbbda5ff32bea0cfa9478c1059d0f2f48622bd148729eb68"
+    },
+    {
+      "id": "skill-core-api",
+      "condition": "skill",
+      "path": "skill/references/core-api.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/references/core-api.md",
+      "immutable": true,
+      "bytes": 14455,
+      "sha256": "e16aa5717d2b12d6fc06634241a7f08c0f39e862566f4563e605374907e6dd05"
+    },
+    {
+      "id": "skill-providers",
+      "condition": "skill",
+      "path": "skill/references/providers.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/references/providers.md",
+      "immutable": true,
+      "bytes": 4455,
+      "sha256": "eb6009252cdf100e2782a78ae693aa9c636419ab301161045af6037784a340df"
+    },
+    {
+      "id": "skill-workflows",
+      "condition": "skill",
+      "path": "skill/references/workflows.md",
+      "url": "https://raw.githubusercontent.com/pixeltable/pixeltable-skill/f550e6ed757b48635e4f53900840f4e9a1fb4c93/skills/pixeltable-skill/references/workflows.md",
+      "immutable": true,
+      "bytes": 3383,
+      "sha256": "62626f7cdaeb9f09a141f3ff06301e570acf9a819baf1c94d4e5556de0f56347"
+    },
+    {
+      "id": "get-started",
+      "condition": "website",
+      "path": "website/get-started.md",
+      "url": "https://www.pixeltable.com/get-started.md",
+      "immutable": false,
+      "retrieved_at": "2026-09-10",
+      "bytes": 7832,
+      "sha256": "7d03873526a31940552adbd4ea3b1be79b308d058a6d4b64d437ac97d14e4578"
+    },
+    {
+      "id": "llms",
+      "condition": "website",
+      "path": "website/llms.txt",
+      "url": "https://www.pixeltable.com/llms.txt",
+      "immutable": false,
+      "retrieved_at": "2026-09-10",
+      "bytes": 27381,
+      "sha256": "7b326e37ac26468d1553a86fafe03680a61ddd0216e44c46f1931e168e3b72d8"
+    }
+  ]
+}

@@ -1,29 +1,24 @@
-"""Shared pytest fixtures and configuration."""
+"""Shared test configuration."""
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_DIR = REPO_ROOT / "src"
-
-# Allow tests to run without installing the package first (e.g. local dev,
-# uv run pytest directly against the repo).
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+from mcp_server_pixeltable_developer.runtime import ServerConfig, find_pxt_executable
 
 
-def pytest_collection_modifyitems(config, items):
-    """Skip slow tests unless --run-slow was passed.
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run tests that initialize a real Pixeltable catalog and service.",
+    )
 
-    Aligned with the pixeltable-starter-kit's pattern: fast suite by default,
-    opt-in to the smoke test that actually initializes Pixeltable on a temp
-    PIXELTABLE_HOME.
-    """
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     if config.getoption("--run-slow"):
         return
     skip_slow = pytest.mark.skip(reason="needs --run-slow")
@@ -32,25 +27,22 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_slow)
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests that initialize a real Pixeltable instance.",
-    )
-
-
-@pytest.fixture(scope="session")
-def repo_root() -> Path:
-    return REPO_ROOT
-
-
 @pytest.fixture
-def isolated_pixeltable_home(tmp_path, monkeypatch):
-    """Point PIXELTABLE_HOME at a temp directory so tests never touch user data."""
-    home = tmp_path / "pxt-home"
-    home.mkdir()
-    monkeypatch.setenv("PIXELTABLE_HOME", str(home))
+def server_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ServerConfig:
+    project_root = tmp_path / "project"
+    pixeltable_home = tmp_path / "catalog"
+    project_root.mkdir()
+    pixeltable_home.mkdir()
+    monkeypatch.delenv("PIXELTABLE_MCP_ENABLE_UNSAFE", raising=False)
+    monkeypatch.setenv("PIXELTABLE_MCP_PROJECT_ROOT", str(project_root))
+    monkeypatch.setenv("PIXELTABLE_HOME", str(pixeltable_home))
     monkeypatch.setenv("PIXELTABLE_DISABLE_STDOUT", "1")
-    return home
+    pxt_executable = find_pxt_executable()
+    if not Path(pxt_executable).is_file():
+        pytest.fail("pxt executable is unavailable in the test environment")
+    return ServerConfig(
+        project_root=project_root,
+        pixeltable_home=pixeltable_home,
+        pxt_executable=pxt_executable,
+        command_timeout_seconds=60,
+    )

@@ -4,79 +4,58 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-server-pixeltable-developer"
-version = "0.1.0"
-description = "MCP server for Pixeltable (Developer version)"
+version = "0.2.0"
+description = "A local developer MCP server for Pixeltable applications"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 keywords = ["mcp", "pixeltable", "ai", "data", "multimodal", "machine-learning"]
 authors = [
     {name = "Identimoji", email = "help@identimoji.io"},
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    # 0.6.x: pxt.mcp_udfs, FastAPIRouter, return_rows=True, named indexes; matches pixeltable-skill + starter-kit
-    "pixeltable>=0.6.3",
-    # FastMCP / Inspector: 1.10+ matches current SDK; loosen if you must support older envs
-    "mcp[cli]>=1.10.0",
-    "requests>=2.31.0",
-    "toml>=0.10.2",
-    "uvloop>=0.19.0; sys_platform != 'win32'",
+    "mcp>=2.2,<3",
+    "packaging>=24",
+    "pixeltable[serve]>=0.7.6,<0.8",
+    "pydantic>=2.11,<3",
 ]
 
 [project.optional-dependencies]
-# Optional browser canvas (display_in_browser tool). Without this extra, canvas startup is skipped.
+# Optional browser canvas used by pixeltable_unsafe_display.
 canvas = [
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
 ]
 test = [
+    "build>=1.2",
+    "mcp[cli]>=2.2,<3",
+    "pyright>=1.1.405",
     "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.12",
 ]
-all = [
-    "ollama>=0.5.1",
-    "fireworks-ai>=0.19.0",
-    "sentence-transformers>=5.0.0",
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
-    "pixeltable-yolox>=0.4.2",
-    "transformers>=4.53.2",
-    "gliner>=0.2.21",
-    "fastapi>=0.115.0",
-    "uvicorn>=0.32.0",
-]
-ml = [
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
-    "transformers>=4.53.2",
-    "sentence-transformers>=5.0.0",
-]
-llm = [
-    "ollama>=0.5.1",
-    "fireworks-ai>=0.19.0",
-]
-vision = [
-    "pixeltable-yolox>=0.4.2",
-]
-
 [project.urls]
 "Homepage" = "https://github.com/pixeltable/mcp-server-pixeltable-developer"
 "Bug Tracker" = "https://github.com/pixeltable/mcp-server-pixeltable-developer/issues"
 
 [project.scripts]
-mcp-server-pixeltable-developer = "mcp_server_pixeltable_stio.__main__:main"
+mcp-server-pixeltable-developer = "mcp_server_pixeltable_developer.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_server_pixeltable_stio"]
+packages = [
+    "src/mcp_server_pixeltable_developer",
+    "src/mcp_server_pixeltable_stio",
+]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "canvas.html" = "share/mcp-server-pixeltable-developer/canvas.html"
@@ -87,6 +66,9 @@ include = [
     "/README.md",
     "/LICENSE",
     "/canvas.html",
+    "/docs",
+    "/evals",
+    "/scripts",
 ]
 
 [tool.pytest.ini_options]
@@ -98,3 +80,17 @@ markers = [
 filterwarnings = [
     "ignore:Field name \"schema\".*shadows.*:UserWarning",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"

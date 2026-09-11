@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "conditions": [
+    {
+      "id": "mcp_skill",
+      "label": "upgraded MCP plus Pixeltable skill 2.8.3",
+      "guidance": "skill",
+      "mcp_enabled": true
+    },
+    {
+      "id": "skill_only",
+      "label": "Pixeltable skill 2.8.3 alone",
+      "guidance": "skill",
+      "mcp_enabled": false
+    },
+    {
+      "id": "website_docs",
+      "label": "get-started.md plus llms.txt",
+      "guidance": "website",
+      "mcp_enabled": false
+    }
+  ],
+  "repetitions": 2,
+  "defaults": {
+    "timeout_seconds": 900,
+    "max_tool_calls": 80,
+    "max_output_chars": 50000
+  },
+  "scenarios": [
+    {
+      "id": "initial_http_app",
+      "title": "Initial HTTP application",
+      "prompt_file": "prompts/01-initial-http-app.md",
+      "required_files": ["app.py"],
+      "verification": "initial_http_app",
+      "recovery_applicable": false,
+      "live_boundaries": []
+    },
+    {
+      "id": "document_retrieval",
+      "title": "Deterministic document retrieval",
+      "prompt_file": "prompts/02-document-retrieval.md",
+      "required_files": ["app.py"],
+      "verification": "document_retrieval",
+      "recovery_applicable": false,
+      "live_boundaries": []
+    },
+    {
+      "id": "image_video",
+      "title": "Image and video processing",
+      "prompt_file": "prompts/03-image-video.md",
+      "required_files": ["app.py"],
+      "verification": "image_video",
+      "recovery_applicable": false,
+      "live_boundaries": []
+    },
+    {
+      "id": "audio_processing",
+      "title": "Audio processing",
+      "prompt_file": "prompts/04-audio-processing.md",
+      "required_files": ["app.py"],
+      "verification": "audio_processing",
+      "recovery_applicable": false,
+      "live_boundaries": []
+    },
+    {
+      "id": "tool_calling",
+      "title": "Mocked tool calling",
+      "prompt_file": "prompts/05-tool-calling.md",
+      "required_files": ["app.py"],
+      "verification": "tool_calling",
+      "recovery_applicable": false,
+      "live_boundaries": ["provider wiring is mocked; no provider quality claim"]
+    },
+    {
+      "id": "schema_evolution",
+      "title": "Schema evolution",
+      "prompt_file": "prompts/06-schema-evolution.md",
+      "required_files": ["schema_v1.py", "schema_v2.py", "schema_expression_change.py", "SCHEMA_EVOLUTION.md"],
+      "verification": "schema_evolution",
+      "recovery_applicable": true,
+      "live_boundaries": []
+    },
+    {
+      "id": "failed_computation_recovery",
+      "title": "Failed computation recovery",
+      "prompt_file": "prompts/07-failed-computation-recovery.md",
+      "required_files": ["app.py", "RECOVERY.md"],
+      "verification": "failed_computation_recovery",
+      "recovery_applicable": true,
+      "live_boundaries": []
+    },
+    {
+      "id": "cloud_preparation",
+      "title": "Cloud deployment preparation",
+      "prompt_file": "prompts/08-cloud-preparation.md",
+      "required_files": ["app.py", "pixeltable.cloud.toml.example", "CLOUD.md"],
+      "verification": "cloud_preparation",
+      "recovery_applicable": false,
+      "live_boundaries": ["Cloud instructions are source-reviewed only; no hosted resource is created"]
+    }
+  ]
+}
