@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from contextlib import suppress
 from typing import Annotated, Any, Literal, TypeVar
 from urllib.parse import urlsplit
@@ -124,6 +125,42 @@ def _service_info(payload: Any) -> ServiceInfo:
     return _model(ServiceInfo, normalized, operation="service listing")
 
 
+DIRECTORY_KINDS = frozenset({"directory", "dir"})
+
+
+def _walk_entries(node: Any) -> Iterator[dict[str, Any]]:
+    """Yield every nested catalog entry dict below a listing node."""
+    if not isinstance(node, dict):
+        return
+    for entry in node.get("entries") or []:
+        if isinstance(entry, dict):
+            yield entry
+            yield from _walk_entries(entry)
+
+
+async def _row_counts(runner: CommandRunner, directories: Sequence[str]) -> dict[str, int]:
+    """Map table path to row count.
+
+    ``pxt ls --tree`` reports structure but omits row counts, and a flat listing covers only one
+    directory, so counts come from one flat listing per directory in the tree.
+    """
+    counts: dict[str, int] = {}
+    for directory in directories:
+        arguments = ["ls"]
+        if directory:
+            arguments.append(directory)
+        arguments.extend(["--counts", "--json"])
+        payload = _dict(await runner.pxt(arguments), operation="catalog listing")
+        for entry in payload.get("entries") or []:
+            if not isinstance(entry, dict):
+                continue
+            path = entry.get("path")
+            num_rows = entry.get("num_rows")
+            if isinstance(path, str) and isinstance(num_rows, int):
+                counts[path] = num_rows
+    return counts
+
+
 def register_default_tools(
     server: MCPServer[Any],
     config: ServerConfig,
@@ -149,8 +186,6 @@ def register_default_tools(
         if catalog_path:
             arguments.append(catalog_path)
         arguments.extend(["--tree", "--json"])
-        if include_counts:
-            arguments.append("--counts")
         result = await runner.pxt(arguments)
         payload = _dict(result, operation="catalog listing")
         tree_payload = payload.get("tree")
@@ -159,6 +194,20 @@ def register_default_tools(
             entries_payload = tree_payload.get("entries", entries_payload)
         if not isinstance(entries_payload, list):
             raise ToolError("Pixeltable returned an unexpected catalog listing")
+        if include_counts:
+            container = tree_payload if isinstance(tree_payload, dict) else {"entries": entries_payload}
+            nested = list(_walk_entries(container))
+            directories = [catalog_path]
+            directories.extend(
+                entry["path"]
+                for entry in nested
+                if entry.get("kind") in DIRECTORY_KINDS and isinstance(entry.get("path"), str)
+            )
+            counts = await _row_counts(runner, directories)
+            for entry in nested:
+                path_value = entry.get("path")
+                if isinstance(path_value, str) and path_value in counts:
+                    entry["rows"] = counts[path_value]
         tree = _model(CatalogEntry, tree_payload, operation="catalog tree") if tree_payload is not None else None
         entries = [_model(CatalogEntry, entry, operation="catalog entry") for entry in entries_payload]
         return CatalogResult(path=catalog_path, entries=entries, tree=tree)
