@@ -1,0 +1,25 @@
+{
+  "fixtures": {
+    "audio.wav": {
+      "bytes": 16044,
+      "expectation": "one second, mono, 8000 Hz, 440 Hz tone",
+      "sha256": "8033c9c459b80d3616131baaf9dd0a698a98cf3d307f013188093586c4f2812e"
+    },
+    "document.html": {
+      "bytes": 89,
+      "expectation": "two paragraphs; beta appears only in the second",
+      "sha256": "f34b91dac689361d7ed9e70f35cd676dc8cd190f55896e1f90d8d564f82d3c01"
+    },
+    "image.png": {
+      "bytes": 89,
+      "expectation": "32x20 RGB red image",
+      "sha256": "b288d088561b1d074800a6ecce3887de5cc2cad8c4e78ea73caf70402e19085d"
+    },
+    "video.mp4": {
+      "bytes": 1015,
+      "expectation": "four 32x24 frames at 2 fps",
+      "sha256": "3ac7c9af37cdf168d1ac6c531ec593c46dde4272f5455b338e5a6b973d3c3a1f"
+    }
+  },
+  "schema_version": 1
+}

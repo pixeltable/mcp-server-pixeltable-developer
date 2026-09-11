@@ -1,0 +1,125 @@
+{
+  "boundaries": [],
+  "codex_returncode": 1,
+  "codex_timed_out": false,
+  "condition": "website_docs",
+  "elapsed_seconds": 28.076794749998953,
+  "final_sha256": null,
+  "guidance_sha256": "708ca58c800cadd447aac0a17de88c2a42996555115cc5972783288cadc6b69e",
+  "prompt_sha256": "f42843425da1ff1ef756d9e5be75f08608e7fc9ae0ea24b5762b38a491d492b4",
+  "repetition": 2,
+  "scenario": "initial_http_app",
+  "schema_version": 1,
+  "settings": {
+    "approval": "approve-for-me",
+    "codex_cli": "codex-cli 0.153.4",
+    "ephemeral": true,
+    "ignore_rules": true,
+    "ignore_user_config": true,
+    "mcp": "2.2.0",
+    "model": "gpt-6-astra",
+    "pixeltable": "0.7.6",
+    "prompt_wrapper": 1,
+    "python": "3.11.13",
+    "reasoning_effort": "low",
+    "sandbox": "workspace-write"
+  },
+  "settings_sha256": "2e091eb4d143a60d586e72175f884aa643e9ef3668f04337bb0ef07e4c3b7a69",
+  "source_manifest": "sources/retrievals.json",
+  "source_manifest_sha256": "99b411744a462a2ad573b3435c2c6446cbdbb8356b9028cca92f697f560de8b6",
+  "started_at": "2026-09-10T21:13:19.008635+00:00",
+  "stderr_bytes": 656,
+  "stderr_sha256": "7f9ad98914ac9670de1923a072b964128881db98c6fd27f12f085e981540fc2d",
+  "stderr_truncated": false,
+  "tool_calls": 4,
+  "tool_calls_by_type": {
+    "command_execution": 4
+  },
+  "tool_limit_exceeded": false,
+  "transcript_bytes": 40087,
+  "transcript_sha256": "33ff0651e7ec506f0c61502c232207bbfdc1eba2ac9757f3454857015c28d13e",
+  "transcript_truncated": false,
+  "trial_id": "initial_http_app__website_docs__r2",
+  "verifier": {
+    "boundaries": [],
+    "checks": [
+      {
+        "detail": "all required artifacts exist",
+        "name": "required artifacts",
+        "passed": true
+      },
+      {
+        "detail": "valid Python syntax",
+        "name": "parse app.py",
+        "passed": true
+      },
+      {
+        "detail": "no unsupported APIs",
+        "name": "supported APIs",
+        "passed": true
+      },
+      {
+        "detail": "no unnecessary frameworks or stores",
+        "name": "dependency discipline",
+        "passed": true
+      },
+      {
+        "detail": "required constructs present",
+        "name": "scenario source shape",
+        "passed": true
+      },
+      {
+        "detail": "copied 9 files into clean verification project",
+        "name": "workspace copied",
+        "passed": true
+      },
+      {
+        "detail": "returncode=0; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'init', '--json']; stderr=",
+        "name": "command 1",
+        "passed": true
+      },
+      {
+        "detail": "returncode=1; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'schema', 'check', 'app.py', '--json']; stderr=pxt: 422 error loading /private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-initial_http_app-r0gbjs7v/project/app.py: TableModelMeta.__prepare__() got an unexpected keyword argument 'primary_key'\n",
+        "name": "command 2",
+        "passed": false
+      }
+    ],
+    "commands": [
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "init",
+          "--json"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\n  \"project_root\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-initial_http_app-r0gbjs7v/project\",\n  \"config_file\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-initial_http_app-r0gbjs7v/project/pixeltable.toml\",\n  \"created\": false,\n  \"unusable_dirs\": []\n}\n"
+      },
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "schema",
+          "check",
+          "app.py",
+          "--json"
+        ],
+        "returncode": 1,
+        "stderr": "pxt: 422 error loading /private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-initial_http_app-r0gbjs7v/project/app.py: TableModelMeta.__prepare__() got an unexpected keyword argument 'primary_key'\n",
+        "stdout": ""
+      }
+    ],
+    "critical_defect": false,
+    "executable_correctness": 1,
+    "passed": false,
+    "recovery": null,
+    "scenario": "initial_http_app",
+    "schema_version": 1,
+    "task_completion": 2,
+    "unnecessary_dependency_count": 0,
+    "unsupported_api_count": 0
+  },
+  "verifier_returncode": 1,
+  "verifier_stderr": "",
+  "verifier_stdout": "{\"scenario\": \"initial_http_app\", \"passed\": false, \"task_completion\": 2, \"executable_correctness\": 1}\n",
+  "verifier_timed_out": false
+}

@@ -1,0 +1,147 @@
+{
+  "boundaries": [
+    "Cloud instructions are source-reviewed only; no hosted resource is created"
+  ],
+  "codex_returncode": 1,
+  "codex_timed_out": false,
+  "condition": "website_docs",
+  "elapsed_seconds": 3.116135416959878,
+  "final_sha256": null,
+  "guidance_sha256": "708ca58c800cadd447aac0a17de88c2a42996555115cc5972783288cadc6b69e",
+  "prompt_sha256": "fcad45017efaf60770605cc6693077f44d4234a5d309b69446c6f65c322a227d",
+  "repetition": 1,
+  "scenario": "cloud_preparation",
+  "schema_version": 1,
+  "settings": {
+    "approval": "approve-for-me",
+    "codex_cli": "codex-cli 0.153.4",
+    "ephemeral": true,
+    "ignore_rules": true,
+    "ignore_user_config": true,
+    "mcp": "2.2.0",
+    "model": "gpt-6-astra",
+    "pixeltable": "0.7.6",
+    "prompt_wrapper": 1,
+    "python": "3.11.13",
+    "reasoning_effort": "low",
+    "sandbox": "workspace-write"
+  },
+  "settings_sha256": "2e091eb4d143a60d586e72175f884aa643e9ef3668f04337bb0ef07e4c3b7a69",
+  "source_manifest": "sources/retrievals.json",
+  "source_manifest_sha256": "99b411744a462a2ad573b3435c2c6446cbdbb8356b9028cca92f697f560de8b6",
+  "started_at": "2026-09-10T21:15:48.434855+00:00",
+  "stderr_bytes": 826,
+  "stderr_sha256": "5c27b8177df359c840d064fece7ceb312baac70e90b419f0b7853e0e5a2275e9",
+  "stderr_truncated": false,
+  "tool_calls": 0,
+  "tool_calls_by_type": {},
+  "tool_limit_exceeded": false,
+  "transcript_bytes": 293,
+  "transcript_sha256": "a0dbe3e0f079fb9a39bb457b34e008ebc42126ff15f2941c9c336c8f24ca643d",
+  "transcript_truncated": false,
+  "trial_id": "cloud_preparation__website_docs__r1",
+  "verifier": {
+    "boundaries": [
+      "Cloud instructions are source-reviewed only; no hosted resource is created"
+    ],
+    "checks": [
+      {
+        "detail": "missing: app.py, pixeltable.cloud.toml.example, CLOUD.md",
+        "name": "required artifacts",
+        "passed": false
+      },
+      {
+        "detail": "no unsupported APIs",
+        "name": "supported APIs",
+        "passed": true
+      },
+      {
+        "detail": "no unnecessary frameworks or stores",
+        "name": "dependency discipline",
+        "passed": true
+      },
+      {
+        "detail": "missing app.py",
+        "name": "scenario source shape",
+        "passed": false
+      },
+      {
+        "detail": "missing pixeltable.cloud.toml.example",
+        "name": "Cloud configuration",
+        "passed": false
+      },
+      {
+        "detail": "missing CLOUD.md",
+        "name": "Cloud runbook",
+        "passed": false
+      },
+      {
+        "detail": "[-1, -1, -1]",
+        "name": "Cloud command order",
+        "passed": false
+      },
+      {
+        "detail": "copied 7 files into clean verification project",
+        "name": "workspace copied",
+        "passed": true
+      },
+      {
+        "detail": "returncode=0; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'init', '--json']; stderr=",
+        "name": "command 1",
+        "passed": true
+      },
+      {
+        "detail": "returncode=1; argv=['/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt', 'schema', 'check', 'app.py', '--json']; stderr=pxt schema check: file not found: app.py\n",
+        "name": "command 2",
+        "passed": false
+      },
+      {
+        "detail": "no literal API credential",
+        "name": "Cloud secret handling",
+        "passed": true
+      },
+      {
+        "detail": "no hosted deployment evidence or resource marker exists",
+        "name": "Cloud boundary",
+        "passed": true
+      }
+    ],
+    "commands": [
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "init",
+          "--json"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "{\n  \"project_root\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-cloud_preparation-22wxnnvp/project\",\n  \"config_file\": \"/private/var/folders/s4/0zdx499s6sv3_0jll6ccdbh00000gn/T/pxt-eval-cloud_preparation-22wxnnvp/project/pixeltable.toml\",\n  \"created\": true,\n  \"unusable_dirs\": []\n}\n"
+      },
+      {
+        "argv": [
+          "/Users/pjlb/mcp-server-pixeltable-developer/.venv/bin/pxt",
+          "schema",
+          "check",
+          "app.py",
+          "--json"
+        ],
+        "returncode": 1,
+        "stderr": "pxt schema check: file not found: app.py\n",
+        "stdout": ""
+      }
+    ],
+    "critical_defect": true,
+    "executable_correctness": 1,
+    "passed": false,
+    "recovery": null,
+    "scenario": "cloud_preparation",
+    "schema_version": 1,
+    "task_completion": 0,
+    "unnecessary_dependency_count": 0,
+    "unsupported_api_count": 0
+  },
+  "verifier_returncode": 1,
+  "verifier_stderr": "",
+  "verifier_stdout": "{\"scenario\": \"cloud_preparation\", \"passed\": false, \"task_completion\": 0, \"executable_correctness\": 1}\n",
+  "verifier_timed_out": false
+}

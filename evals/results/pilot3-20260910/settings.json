@@ -1,0 +1,14 @@
+{
+  "approval": "approve-for-me",
+  "codex_cli": "codex-cli 0.153.4",
+  "ephemeral": true,
+  "ignore_rules": true,
+  "ignore_user_config": true,
+  "mcp": "2.2.0",
+  "model": "gpt-6-astra",
+  "pixeltable": "0.7.6",
+  "prompt_wrapper": 1,
+  "python": "3.11.13",
+  "reasoning_effort": "low",
+  "sandbox": "workspace-write"
+}

@@ -1,7 +1,14 @@
-"""
-MCP server for Pixeltable.
+"""One-release compatibility shim for the package name misspelled before 0.2."""
 
-This package provides an MCP server implementation that exposes Pixeltable functionality.
-"""
+from __future__ import annotations
 
-__version__ = "0.1.0"
+import sys
+
+print(
+    "mcp_server_pixeltable_stio is deprecated; import mcp_server_pixeltable_developer instead.",
+    file=sys.stderr,
+)
+
+from mcp_server_pixeltable_developer import __version__  # noqa: E402
+
+__all__ = ["__version__"]
