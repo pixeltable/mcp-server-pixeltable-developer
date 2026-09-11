@@ -31,6 +31,11 @@ for multimodal retrieval and agents. Do not add a separate dataframe store or
 vector database.
 For failures, inspect `pxt errors TABLE` and preview
 `pxt recompute TABLE COLUMN --errors-only -n` before applying it with `-f`.
+
+The scaffolded example declares no primary key, and row-addressed operations
+(`pxt get`, `pxt errors`) require one. Declare it as an assignment,
+`doc_id = pxt.Column(type=pxt.Int, primary_key=True)`, before the first schema
+update: Pixeltable cannot add a primary key to a table that already exists.
 """
 
 

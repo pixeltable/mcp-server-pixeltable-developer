@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 from mcp import Client
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.shared.exceptions import MCPError
 from mcp.types import TextContent, TextResourceContents
 from packaging.version import Version
@@ -244,6 +245,36 @@ async def test_unexpected_tool_failure_is_sanitized(
     assert "secret-client-must-not-see" not in content.text
     assert content.text == "Error executing tool pixeltable_list_catalog"
     assert any("unexpected exception" in record.getMessage() for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_row_tools_explain_a_missing_primary_key(
+    server_config: ServerConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scaffolded model declares no primary key, so these two tools fail first and must say why."""
+
+    async def refuse(*args: object, **kwargs: object) -> object:
+        raise ToolError(
+            "Pixeltable command failed: pxt: 422 demo/docs: no primary key defined; row lookup requires one"
+        )
+
+    monkeypatch.setattr("mcp_server_pixeltable_developer.runtime.CommandRunner.pxt", refuse)
+    calls: list[tuple[str, dict[str, Any]]] = [
+        ("pixeltable_get_row", {"path": "demo/docs", "primary_key": ["1"]}),
+        ("pixeltable_errors", {"path": "demo/docs"}),
+    ]
+    async with Client(create_server(server_config), raise_exceptions=False) as client:
+        for name, arguments in calls:
+            result = await client.call_tool(name, arguments)
+            assert result.is_error is True, name
+            content = result.content[0]
+            assert isinstance(content, TextContent)
+            assert "demo/docs has no primary key" in content.text, name
+            assert "pxt.Column(type=pxt.Int, primary_key=True)" in content.text, name
+            assert "pixeltable_rows" in content.text, name
+            # The bare CLI status code is replaced, not merely appended to.
+            assert "422" not in content.text, name
 
 
 def test_contract_constants_have_no_duplicates() -> None:
