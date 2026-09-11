@@ -125,6 +125,21 @@ def _service_info(payload: Any) -> ServiceInfo:
     return _model(ServiceInfo, normalized, operation="service listing")
 
 
+NO_PRIMARY_KEY_MARKER = "no primary key defined"
+
+# `pxt service example` scaffolds a model without a primary key, so the first call an agent makes to a
+# row-addressed tool fails with a bare 422. Explain the requirement and the way out instead.
+PRIMARY_KEY_REMEDY = (
+    "Declare one in the model as an assignment, for example "
+    "`doc_id = pxt.Column(type=pxt.Int, primary_key=True)`, and apply that schema to a new table. "
+    "Pixeltable cannot add a primary key to a table that already exists."
+)
+
+
+def _primary_key_error(table_path: str, alternative: str) -> ToolError:
+    return ToolError(f"{table_path} has no primary key. {PRIMARY_KEY_REMEDY} {alternative}")
+
+
 DIRECTORY_KINDS = frozenset({"directory", "dir"})
 
 
@@ -252,7 +267,10 @@ def register_default_tools(
 
     @server.tool(
         name="pixeltable_get_row",
-        description="Look up one local table row using primary-key values in declared key order.",
+        description=(
+            "Look up one local table row using primary-key values in declared key order. "
+            "The table must declare a primary key; pixeltable_describe reports whether it does."
+        ),
         annotations=READ_ONLY_LOCAL,
         structured_output=True,
     )
@@ -270,7 +288,14 @@ def register_default_tools(
         if selected_columns:
             arguments.extend(["--cols", ",".join(selected_columns)])
         arguments.extend(["--", table_path, *primary_key])
-        result = await runner.pxt(arguments)
+        try:
+            result = await runner.pxt(arguments)
+        except ToolError as exc:
+            if NO_PRIMARY_KEY_MARKER in str(exc):
+                raise _primary_key_error(
+                    table_path, "Use pixeltable_rows to read rows from a table without one."
+                ) from exc
+            raise
         payload = _dict(result, operation="primary-key lookup")
         row = payload.get("row")
         if not isinstance(row, dict):
@@ -279,7 +304,10 @@ def register_default_tools(
 
     @server.tool(
         name="pixeltable_errors",
-        description="List failed computed-column values for a local table that has a primary key.",
+        description=(
+            "List failed computed-column values for a local table that has a primary key. "
+            "The table must declare one; pixeltable_describe reports whether it does."
+        ),
         annotations=READ_ONLY_LOCAL,
         structured_output=True,
     )
@@ -292,7 +320,15 @@ def register_default_tools(
         if column is not None:
             column = config.validate_identifier(column, label="column name")
             arguments.extend(["--col", column])
-        result = await runner.pxt(arguments)
+        try:
+            result = await runner.pxt(arguments)
+        except ToolError as exc:
+            if NO_PRIMARY_KEY_MARKER in str(exc):
+                raise _primary_key_error(
+                    table_path,
+                    "Failed values cannot be listed per row without one; pixeltable_rows still shows stored columns.",
+                ) from exc
+            raise
         raw_errors = _list(result, operation="computed-column errors")
         if any(not isinstance(error, dict) for error in raw_errors):
             raise ToolError("Pixeltable returned an unexpected error listing")
