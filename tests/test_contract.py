@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Mapping
+from importlib.metadata import version as distribution_version
 from typing import Any
 
 import pytest
 from mcp import Client
 from mcp.shared.exceptions import MCPError
 from mcp.types import TextContent, TextResourceContents
+from packaging.version import Version
 
 from mcp_server_pixeltable_developer.runtime import ServerConfig
 from mcp_server_pixeltable_developer.server import create_server
@@ -151,15 +153,22 @@ async def test_resources_are_typed_redacted_and_current(server_config: ServerCon
     assert isinstance(status_content, TextResourceContents)
     assert status_content.mime_type == "application/json"
     status = json.loads(status_content.text)
+    installed_mcp = distribution_version("mcp")
+    installed_pixeltable = distribution_version("pixeltable")
     assert status == {
         "server_name": "pixeltable-developer",
         "server_version": "0.2.0",
-        "mcp_version": "2.2.0",
-        "pixeltable_version": "0.7.6",
+        "mcp_version": installed_mcp,
+        "pixeltable_version": installed_pixeltable,
         "project": server_config.project_root.name,
         "transport": "stdio",
         "unsafe_tools_enabled": False,
     }
+    # The resource must report the installed versions, and those must stay inside the
+    # supported lines pyproject.toml declares. Asserting exact patch versions here made
+    # the unlocked CI job fail on every upstream release.
+    assert Version("2.2") <= Version(installed_mcp) < Version("3")
+    assert Version("0.7.6") <= Version(installed_pixeltable) < Version("0.8")
     assert str(server_config.project_root) not in status_content.text
 
     app_content = app_result.contents[0]
