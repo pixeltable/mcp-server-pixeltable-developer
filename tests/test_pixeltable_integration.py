@@ -106,6 +106,15 @@ async def test_scaffold_schema_data_and_http_service_lifecycle(server_config: Se
                 },
             )
             assert insertion["num_rows"] == 1
+
+            # include_counts must actually populate row counts: 'pxt ls --tree' omits them,
+            # so the counts come from a separate flat listing per directory.
+            counted = await _call(client, "pixeltable_list_catalog", {"include_counts": True})
+            counted_docs = counted["tree"]["entries"][0]["entries"][0]
+            assert counted_docs["path"] == "trial/docs"
+            assert counted_docs["rows"] == 1
+            uncounted = await _call(client, "pixeltable_list_catalog")
+            assert uncounted["tree"]["entries"][0]["entries"][0]["rows"] is None
             rows = await _call(client, "pixeltable_rows", {"path": "trial/docs", "limit": 5})
             assert rows["rows"] == [
                 {
