@@ -188,6 +188,35 @@ Before release, also run the latest-dependency compatibility job, the MCP
 in-memory contract tests, the subprocess `stdio` smoke test, lint, type checks,
 and package build verification described in the review report.
 
+## Privacy Policy
+
+The server runs entirely on the machine that starts it. It collects no telemetry
+and no analytics, and it sends nothing to Pixeltable or to any third party.
+
+**What it handles.** The Pixeltable catalog at `PIXELTABLE_HOME` and the
+application files under `PIXELTABLE_MCP_PROJECT_ROOT`, both chosen by you. Tool
+results are returned to the MCP client that launched the server, which is how
+your assistant reads them. Nothing else receives them.
+
+**Storage and retention.** The server stores nothing of its own. Catalog data
+stays in `PIXELTABLE_HOME` on your disk, under your control, and is removed when
+you remove it.
+
+**Secrets.** Command output is passed through a redactor that masks common
+credential forms, including URL passwords and API tokens, before it reaches the
+client.
+
+**Third parties.** If your application declares computed columns that call model
+providers, Pixeltable makes those calls with the credentials you configured. That
+traffic is your application's, not this server's.
+
+**Unsafe mode.** With `PIXELTABLE_MCP_ENABLE_UNSAFE=1`, the added tools execute
+arbitrary Python, install packages, and read files available to the server
+process. Enable it only on a trusted local machine.
+
+**Contact.** Report privacy questions through
+[GitHub issues](https://github.com/pixeltable/mcp-server-pixeltable-developer/issues).
+
 ## Documentation
 
 - [0.1.0 evidence review](docs/review-0.1.0.md)

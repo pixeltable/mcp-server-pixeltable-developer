@@ -1,0 +1,140 @@
+{
+  "manifest_version": "0.4",
+  "name": "mcp-server-pixeltable-developer",
+  "display_name": "Pixeltable Developer",
+  "version": "0.2.0",
+  "description": "Build, inspect, and operate Pixeltable applications from Claude.",
+  "author": {
+    "name": "Pixeltable",
+    "url": "https://pixeltable.com/"
+  },
+  "homepage": "https://github.com/pixeltable/mcp-server-pixeltable-developer",
+  "documentation": "https://github.com/pixeltable/mcp-server-pixeltable-developer#readme",
+  "support": "https://github.com/pixeltable/mcp-server-pixeltable-developer/issues",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pixeltable",
+    "multimodal",
+    "data",
+    "ai"
+  ],
+  "server": {
+    "type": "uv",
+    "entry_point": "src/mcp_server_pixeltable_developer/__main__.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "mcp-server-pixeltable-developer"
+      ],
+      "env": {
+        "PIXELTABLE_MCP_PROJECT_ROOT": "${user_config.project_root}",
+        "PIXELTABLE_HOME": "${user_config.pixeltable_home}",
+        "PIXELTABLE_DISABLE_STDOUT": "1"
+      }
+    }
+  },
+  "user_config": {
+    "project_root": {
+      "type": "directory",
+      "title": "Application directory",
+      "description": "Directory holding your Pixeltable app.py. Fixed for the life of the server process.",
+      "required": true
+    },
+    "pixeltable_home": {
+      "type": "directory",
+      "title": "Pixeltable catalog",
+      "description": "Catalog the server may read and mutate. Use a disposable catalog for evaluation.",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.11"
+    }
+  },
+  "tools": [
+    {
+      "name": "pixeltable_list_catalog",
+      "description": "List tables, views, and directories in the local Pixeltable catalog."
+    },
+    {
+      "name": "pixeltable_describe",
+      "description": "Return schema, computed-column, index, and version metadata for a local table or view."
+    },
+    {
+      "name": "pixeltable_rows",
+      "description": "Preview up to 100 rows without evaluating unstored computed columns unless explicitly requested."
+    },
+    {
+      "name": "pixeltable_get_row",
+      "description": "Look up one local table row using primary-key values in declared key order."
+    },
+    {
+      "name": "pixeltable_errors",
+      "description": "List failed computed-column values for a local table that has a primary key."
+    },
+    {
+      "name": "pixeltable_insert_rows",
+      "description": "Insert 1 to 1,000 JSON rows into a local table and run its stored computed columns."
+    },
+    {
+      "name": "pixeltable_recompute",
+      "description": "Preview or run computed-column recovery."
+    },
+    {
+      "name": "pixeltable_scaffold_app",
+      "description": "Initialize the project and write one Pixeltable 0.7 application or brief schema example."
+    },
+    {
+      "name": "pixeltable_schema_check",
+      "description": "Validate a TableModel schema file without reading or changing a catalog."
+    },
+    {
+      "name": "pixeltable_schema_diff",
+      "description": "Read the migration plan between a TableModel schema file and a local or hosted target."
+    },
+    {
+      "name": "pixeltable_schema_update",
+      "description": "Reconcile a TableModel schema against a target."
+    },
+    {
+      "name": "pixeltable_schema_prune",
+      "description": "Preview or remove target tables that are absent from the TableModel schema."
+    },
+    {
+      "name": "pixeltable_service_check",
+      "description": "Validate a FastAPIRouter application without changing a catalog or starting a service."
+    },
+    {
+      "name": "pixeltable_service_diff",
+      "description": "Compare declared FastAPI services with a local or hosted target without changing either."
+    },
+    {
+      "name": "pixeltable_service_update",
+      "description": "Start or reconcile declared services against a local or hosted target."
+    },
+    {
+      "name": "pixeltable_service_list",
+      "description": "List services known locally or for one explicit local/hosted target."
+    },
+    {
+      "name": "pixeltable_service_stop",
+      "description": "Stop one or more named services without removing their configuration."
+    },
+    {
+      "name": "pixeltable_service_prune",
+      "description": "Preview or remove running services absent from the application file."
+    }
+  ],
+  "privacy_policies": [
+    "https://github.com/pixeltable/mcp-server-pixeltable-developer#privacy-policy"
+  ]
+}

@@ -2,11 +2,33 @@
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+DEFAULT_TOOL_NAMES = [
+    "pixeltable_list_catalog",
+    "pixeltable_describe",
+    "pixeltable_rows",
+    "pixeltable_get_row",
+    "pixeltable_errors",
+    "pixeltable_insert_rows",
+    "pixeltable_recompute",
+    "pixeltable_scaffold_app",
+    "pixeltable_schema_check",
+    "pixeltable_schema_diff",
+    "pixeltable_schema_update",
+    "pixeltable_schema_prune",
+    "pixeltable_service_check",
+    "pixeltable_service_diff",
+    "pixeltable_service_update",
+    "pixeltable_service_list",
+    "pixeltable_service_stop",
+    "pixeltable_service_prune",
+]
 
 
 def _fenced_code(text: str) -> str:
@@ -96,3 +118,23 @@ def test_evidence_report_is_reproducible_and_explicit_about_boundaries() -> None
         "not live-tested",
     ]:
         assert value in report
+
+
+def test_mcpb_manifest_matches_the_served_tool_contract() -> None:
+    """The bundle listing is submitted for review, so it must not drift from the server."""
+    manifest = json.loads((ROOT / "mcpb" / "manifest.json").read_text())
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
+
+    assert manifest["version"] == metadata["project"]["version"]
+    assert manifest["server"]["type"] == "uv"
+    # A missing or incomplete privacy policy is an automatic directory rejection.
+    assert manifest["privacy_policies"], "the directory requires at least one privacy policy URL"
+    assert all(url.startswith("https://") for url in manifest["privacy_policies"])
+    assert "## Privacy Policy" in (ROOT / "README.md").read_text()
+
+    manifest_tools = {tool["name"]: tool for tool in manifest["tools"]}
+    assert manifest_tools.keys() == set(DEFAULT_TOOL_NAMES)
+    assert all(tool.get("description") for tool in manifest_tools.values())
+    # The MCPB schema has no per-tool title field; the served tools carry titles instead,
+    # which test_every_tool_declares_a_title_and_a_behavior_hint asserts.
+    assert all("title" not in tool for tool in manifest_tools.values())
