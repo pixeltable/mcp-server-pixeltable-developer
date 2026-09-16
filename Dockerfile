@@ -6,8 +6,7 @@ RUN pip install --no-cache-dir --upgrade uv
 
 WORKDIR /app
 COPY . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen
+RUN uv sync --frozen --no-dev
 
 ENV PIXELTABLE_DISABLE_STDOUT=1
 
