@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.pixeltable/mcp-server-pixeltable-developer",
+  "title": "Pixeltable Developer",
+  "description": "Pixeltable MCP server for declarative multimodal tables, computed columns, and services.",
+  "websiteUrl": "https://pixeltable.com",
+  "repository": {
+    "url": "https://github.com/pixeltable/mcp-server-pixeltable-developer",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "mcp-server-pixeltable-developer",
+      "version": "0.2.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "PIXELTABLE_MCP_PROJECT_ROOT",
+          "description": "Application directory holding your Pixeltable app.py. Fixed for the life of the server process.",
+          "isRequired": false
+        },
+        {
+          "name": "PIXELTABLE_HOME",
+          "description": "Catalog directory the server may read and mutate.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

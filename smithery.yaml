@@ -1,0 +1,27 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      projectRoot:
+        type: string
+        description: "Application directory holding your Pixeltable app.py. Fixed for the life of the server process."
+      pixeltableHome:
+        type: string
+        description: "Directory holding your local Pixeltable catalog."
+    required: []
+  commandFunction:
+    |-
+    (config) => ({
+      command: "uvx",
+      args: [
+        "--from",
+        "git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git",
+        "mcp-server-pixeltable-developer"
+      ],
+      env: {
+        ...(config.projectRoot ? { PIXELTABLE_MCP_PROJECT_ROOT: config.projectRoot } : {}),
+        ...(config.pixeltableHome ? { PIXELTABLE_HOME: config.pixeltableHome } : {})
+      }
+    })
