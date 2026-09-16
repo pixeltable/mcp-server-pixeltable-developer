@@ -304,16 +304,19 @@ def register_unsafe_tools(server: Any, config: UnsafeServerConfig) -> UnsafeRunt
     )
     server.tool(
         name="pixeltable_unsafe_execute_python",
+        title="Execute Python (unsafe)",
         annotations=annotations,
         structured_output=True,
     )(runtime.pixeltable_unsafe_execute_python)
     server.tool(
         name="pixeltable_unsafe_install_package",
+        title="Install package (unsafe)",
         annotations=annotations,
         structured_output=True,
     )(runtime.pixeltable_unsafe_install_package)
     server.tool(
         name="pixeltable_unsafe_display",
+        title="Display in browser (unsafe)",
         annotations=display_annotations,
         structured_output=True,
     )(runtime.pixeltable_unsafe_display)

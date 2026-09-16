@@ -277,6 +277,23 @@ async def test_row_tools_explain_a_missing_primary_key(
             assert "422" not in content.text, name
 
 
+@pytest.mark.asyncio
+async def test_every_tool_declares_a_title_and_a_behavior_hint(server_config: ServerConfig) -> None:
+    """The Connectors Directory rejects a tool without a title or without a read/write hint."""
+    async with Client(create_server(server_config), raise_exceptions=True) as client:
+        tools = (await client.list_tools()).tools
+
+    untitled = [tool.name for tool in tools if not tool.title]
+    assert untitled == [], f"tools missing a title: {untitled}"
+    unhinted = [
+        tool.name
+        for tool in tools
+        if tool.annotations is None
+        or (tool.annotations.read_only_hint is None and tool.annotations.destructive_hint is None)
+    ]
+    assert unhinted == [], f"tools missing a read-only or destructive hint: {unhinted}"
+
+
 def test_contract_constants_have_no_duplicates() -> None:
     assert len(DEFAULT_TOOLS) == len(set(DEFAULT_TOOLS)) == 18
     assert isinstance(RESOURCE_MIME_TYPES, Mapping)
