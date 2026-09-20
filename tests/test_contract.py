@@ -252,7 +252,7 @@ async def test_row_tools_explain_a_missing_primary_key(
     server_config: ServerConfig,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The scaffolded model declares no primary key, so these two tools fail first and must say why."""
+    """A model without a primary key makes these two tools fail first; they must say why, not only 422."""
 
     async def refuse(*args: object, **kwargs: object) -> object:
         raise ToolError(
