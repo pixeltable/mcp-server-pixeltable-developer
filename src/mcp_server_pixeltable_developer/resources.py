@@ -32,9 +32,10 @@ vector database.
 For failures, inspect `pxt errors TABLE` and preview
 `pxt recompute TABLE COLUMN --errors-only -n` before applying it with `-f`.
 
-The scaffolded example declares no primary key, and row-addressed operations
-(`pxt get`, `pxt errors`) require one. Declare it as an assignment,
-`doc_id = pxt.Column(type=pxt.Int, primary_key=True)`, before the first schema
+Row-addressed operations (`pxt get`, `pxt errors`) require a primary key.
+`pxt service example` generates one from Pixeltable 0.7.8 (a uuid7 `id` computed
+on insert); earlier releases did not. Declare it as an assignment,
+`id = pxt.Column(type=pxt.Int, primary_key=True)`, before the first schema
 update: Pixeltable cannot add a primary key to a table that already exists.
 """
 

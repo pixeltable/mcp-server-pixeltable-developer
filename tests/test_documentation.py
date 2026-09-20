@@ -120,21 +120,36 @@ def test_evidence_report_is_reproducible_and_explicit_about_boundaries() -> None
         assert value in report
 
 
-def test_mcpb_manifest_matches_the_served_tool_contract() -> None:
-    """The bundle listing is submitted for review, so it must not drift from the server."""
-    manifest = json.loads((ROOT / "mcpb" / "manifest.json").read_text())
+def test_packaging_metadata_agrees_with_pyproject_and_the_served_contract() -> None:
+    """The bundle manifest, registry entry, and Smithery config are submitted for review, so they must not drift."""
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    version = metadata["project"]["version"]
 
-    assert manifest["version"] == metadata["project"]["version"]
+    manifest = json.loads((ROOT / "mcpb" / "manifest.json").read_text())
+    assert manifest["version"] == version
+    # uv is the MCPB runtime for Python servers: the host manages the interpreter and installs deps.
     assert manifest["server"]["type"] == "uv"
+    assert manifest["server"]["mcp_config"]["command"] == "uv"
     # A missing or incomplete privacy policy is an automatic directory rejection.
     assert manifest["privacy_policies"], "the directory requires at least one privacy policy URL"
     assert all(url.startswith("https://") for url in manifest["privacy_policies"])
     assert "## Privacy Policy" in (ROOT / "README.md").read_text()
+    # Both env vars are required: without them the server aims at cwd and ~/.pixeltable.
+    assert all(manifest["user_config"][key]["required"] is True for key in ("project_root", "pixeltable_home"))
+    # The portal syncs tools from the running server; a static list only drifts. If one is ever added back,
+    # it must match the served contract.
+    if "tools" in manifest:
+        assert {tool["name"] for tool in manifest["tools"]} == set(DEFAULT_TOOL_NAMES)
 
-    manifest_tools = {tool["name"]: tool for tool in manifest["tools"]}
-    assert manifest_tools.keys() == set(DEFAULT_TOOL_NAMES)
-    assert all(tool.get("description") for tool in manifest_tools.values())
-    # The MCPB schema has no per-tool title field; the served tools carry titles instead,
-    # which test_every_tool_declares_a_title_and_a_behavior_hint asserts.
-    assert all("title" not in tool for tool in manifest_tools.values())
+    registry = json.loads((ROOT / "server.json").read_text())
+    assert registry["version"] == version
+    package = registry["packages"][0]
+    assert package["version"] == version
+    assert package["identifier"] == metadata["project"]["name"]
+    assert {var["name"]: var["isRequired"] for var in package["environmentVariables"]} == {
+        "PIXELTABLE_MCP_PROJECT_ROOT": True,
+        "PIXELTABLE_HOME": True,
+    }
+
+    smithery = (ROOT / "smithery.yaml").read_text()
+    assert "required: [projectRoot, pixeltableHome]" in smithery

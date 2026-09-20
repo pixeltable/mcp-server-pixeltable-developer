@@ -37,6 +37,20 @@ cd mcp-server-pixeltable-developer
 uv sync --frozen --extra test
 ```
 
+The repository also builds a container image that runs the same `stdio` server.
+Mount your application directory and point both variables at the mounts; the
+catalog is lost with the container unless you mount one too. On macOS, the host
+paths must be shared with your container engine, or the mount lands inside its VM:
+
+```bash
+docker build -t mcp-server-pixeltable-developer .
+docker run --rm -i \
+  -e PIXELTABLE_MCP_PROJECT_ROOT=/work/app -e PIXELTABLE_HOME=/work/catalog \
+  -v /absolute/path/to/pixeltable-app:/work/app \
+  -v /absolute/path/to/.pixeltable:/work/catalog \
+  mcp-server-pixeltable-developer
+```
+
 Configure a client to launch the server over `stdio`. Replace the repository,
 application project, and catalog paths with absolute paths:
 
@@ -176,7 +190,13 @@ uv run pytest -q
 PIXELTABLE_DISABLE_STDOUT=1 uv run pytest --run-slow -q
 uv run python list_tools.py
 ./scripts/run-conformance.sh
+./scripts/build-mcpb.sh
 ```
+
+`build-mcpb.sh` writes the desktop-extension bundle to `dist/` from tracked files
+only. Pushing a `v*` tag publishes to PyPI through trusted publishing once the
+evaluation gate passes; register this repository, workflow `ci.yml`, and
+environment `pypi` as a trusted publisher on PyPI one time before the first tag.
 
 Run the MCP Inspector only as a local test harness:
 
