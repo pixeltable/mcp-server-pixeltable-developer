@@ -19,7 +19,7 @@
     "ai"
   ],
   "server": {
-    "type": "python",
+    "type": "uv",
     "entry_point": "src/mcp_server_pixeltable_developer/__main__.py",
     "mcp_config": {
       "command": "uv",

@@ -65,8 +65,11 @@ PY
 "${python_bin}" - <<'PY'
 from importlib.metadata import version
 
+from packaging.version import Version
+
+# mcp stays exact: the everything-server fixture below is cloned at that SDK tag.
 assert version("mcp") == "2.2.0", version("mcp")
-assert version("pixeltable") == "0.7.6", version("pixeltable")
+assert Version("0.7.6") <= Version(version("pixeltable")) < Version("0.8"), version("pixeltable")
 PY
 
 domain_port="$(pick_port)"

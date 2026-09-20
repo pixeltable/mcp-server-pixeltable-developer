@@ -23,12 +23,12 @@
         {
           "name": "PIXELTABLE_MCP_PROJECT_ROOT",
           "description": "Application directory holding your Pixeltable app.py. Fixed for the life of the server process.",
-          "isRequired": false
+          "isRequired": true
         },
         {
           "name": "PIXELTABLE_HOME",
           "description": "Catalog directory the server may read and mutate.",
-          "isRequired": false
+          "isRequired": true
         }
       ]
     }

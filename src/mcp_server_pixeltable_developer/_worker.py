@@ -13,7 +13,7 @@ def _insert(payload: dict[str, Any]) -> dict[str, Any]:
     with redirect_stdout(sys.stderr):
         import pixeltable as pxt
 
-        table = pxt.get_table(payload["path"], if_not_exists="ignore")  # pyright: ignore[reportCallIssue]
+        table = pxt.get_table(payload["path"], if_not_exists="ignore")
         if table is None:
             raise ValueError(f"Table does not exist: {payload['path']}")
         rows = payload["rows"]

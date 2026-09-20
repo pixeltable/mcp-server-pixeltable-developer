@@ -10,7 +10,7 @@ startCommand:
       pixeltableHome:
         type: string
         description: "Directory holding your local Pixeltable catalog."
-    required: []
+    required: [projectRoot, pixeltableHome]
   commandFunction:
     |-
     (config) => ({
