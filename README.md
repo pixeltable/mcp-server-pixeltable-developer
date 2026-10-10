@@ -208,9 +208,10 @@ uv run python list_tools.py
 ```
 
 `build-mcpb.sh` writes the desktop-extension bundle to `dist/` from tracked files
-only. Pushing a `v*` tag publishes to PyPI through trusted publishing once the
-evaluation gate passes; register this repository, workflow `ci.yml`, and
-environment `pypi` as a trusted publisher on PyPI one time before the first tag.
+only. Pushing a `v*` tag publishes to PyPI through trusted publishing once the test,
+quality, bounds, conformance, and evaluation-artifact jobs pass; register this
+repository, workflow `ci.yml`, and environment `pypi` as a trusted publisher on
+PyPI one time before the first tag.
 
 Run the MCP Inspector only as a local test harness:
 

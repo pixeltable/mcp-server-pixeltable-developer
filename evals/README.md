@@ -100,7 +100,9 @@ Validate the matrix structure at any time:
 uv run python evals/validate_results.py
 ```
 
-The release gate additionally requires all 48 trials, authenticates each row
+Tags do not run this check: the 48 trials are pinned to Pixeltable 0.7.6 and
+skill 2.8.3, and the 2026-09-10 run errored in the harness. Run it by hand once
+the trials are refreshed. The check requires all 48 trials, authenticates each row
 against its evidence envelope and source lock, rejects critical defects, checks
 overall mean quality against both baselines, and rejects a scenario where the
 MCP condition loses to one baseline in both repetitions:
