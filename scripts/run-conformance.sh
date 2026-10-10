@@ -7,8 +7,8 @@ python_scripts_dir="$("${python_bin}" -c 'import os, sys; print(os.path.dirname(
 pxt_bin="${PIXELTABLE_MCP_PXT:-${python_scripts_dir}/pxt}"
 uv_bin="${UV_BIN:-uv}"
 conformance_package="@modelcontextprotocol/conformance@0.2.0-alpha.11"
-sdk_tag="v2.2.0"
-sdk_commit="9972c21aa42054fb1450c5fc614761ed11847ec6"
+sdk_tag="v2.3.0"
+sdk_commit="2118f14f8a19bc158d8a1cf90af58d85d187f849"
 output_root="${CONFORMANCE_OUTPUT_DIR:-${repo_root}/conformance-results}"
 work_dir="$(mktemp -d)"
 domain_pid=""
@@ -68,8 +68,8 @@ from importlib.metadata import version
 from packaging.version import Version
 
 # mcp stays exact: the everything-server fixture below is cloned at that SDK tag.
-assert version("mcp") == "2.2.0", version("mcp")
-assert Version("0.7.6") <= Version(version("pixeltable")) < Version("0.8"), version("pixeltable")
+assert version("mcp") == "2.3.0", version("mcp")
+assert Version("0.7.10") <= Version(version("pixeltable")) < Version("0.8"), version("pixeltable")
 PY
 
 domain_port="$(pick_port)"

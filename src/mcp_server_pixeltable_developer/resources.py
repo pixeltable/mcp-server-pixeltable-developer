@@ -23,9 +23,11 @@ APP_GUIDANCE = """# Pixeltable application workflow
    `pxt service update app.py TARGET`.
 
 Stored columns are non-nullable by default. Write `pxt.String | None` when null is allowed. Do not use `pxt.Required`.
-Create computed columns declaratively. Changing a computed expression in place is
-unsupported: rename the column, or drop and re-add it.
-`--allow-destructive` does not make that migration supported.
+Create computed columns declaratively. To change a computed expression, edit it and
+run `pxt schema update`: it records the new expression and keeps the stored values,
+so run `pxt recompute TABLE COLUMN -f` to refresh existing rows. Changing a column's
+type is UNSUPPORTED and applies nothing, even with `--allow-destructive`: rename a
+computed column instead, and declare a stored column `T | None` up front.
 Use Pixeltable iterators, embedding indexes, and `pxt.tools()` / `invoke_tools()`
 for multimodal retrieval and agents. Do not add a separate dataframe store or
 vector database.
@@ -33,10 +35,9 @@ For failures, inspect `pxt errors TABLE` and preview
 `pxt recompute TABLE COLUMN --errors-only -n` before applying it with `-f`.
 
 Row-addressed operations (`pxt get`, `pxt errors`) require a primary key.
-`pxt service example` generates one from Pixeltable 0.7.8 (a uuid7 `id` computed
-on insert); earlier releases did not. Declare it as an assignment,
-`id = pxt.Column(type=pxt.Int, primary_key=True)`, before the first schema
-update: Pixeltable cannot add a primary key to a table that already exists.
+`pxt service example` generates one: `id = pxt.Column(value=pxtf.uuid.uuid7(), primary_key=True)`,
+computed on insert. Declare a key in every model before its first schema update:
+Pixeltable cannot add a primary key to a table that already exists.
 """
 
 
@@ -44,11 +45,13 @@ CLOUD_GUIDANCE = """# Pixeltable Cloud preparation
 
 Cloud behavior in this server is source-reviewed but not live-tested. Review each diff before applying it.
 
-1. Add the hosted database to the project configuration with its explicit `pxt://ORG:DATABASE` URI.
-2. Bind non-secret values under `vars` and credentials under `secrets` (for example `secrets.openai_api_key`).
-3. Run `pxt db diff`, then `pxt db update` to upload the project code.
-4. Run `pxt schema diff` and `pxt schema update` against the hosted target.
-5. Run `pxt service diff` and `pxt service update` only after the database code and schema are current.
+1. Sign in with `pxt login`, or export `PIXELTABLE_API_KEY`, which wins over a sign-in.
+2. Add `[[pixeltable.database]]` with `name = 'pxt://ORG:DATABASE'` to `pixeltable.toml`.
+3. Set provider keys with `pxt secret set pxt://ORG OPENAI_API_KEY=...`. Never put
+   secrets in `pixeltable.toml`: a database entry with a `secrets` mapping fails to load.
+4. Run `pxt db diff`, then `pxt db update pxt://ORG:DATABASE -f`. The first update creates the database.
+5. Run `pxt schema diff` and `pxt schema update` against the hosted target.
+6. Run `pxt service diff` and `pxt service update` only after the database code and schema are current.
 
 The MCP schema and service tools accept explicit `pxt://` targets. They never
 create databases or set secrets. A hosted `schema_update` or `service_update` call
@@ -114,7 +117,7 @@ def register_resources(server: MCPServer[Any], config: ServerConfig, runner: Com
         "pixeltable://guidance/app",
         name="pixeltable_application_guidance",
         title="Pixeltable application guidance",
-        description="Application-first workflow aligned with Pixeltable 0.7.6 and skill 2.8.3.",
+        description="Application-first workflow aligned with Pixeltable 0.7.16 and skill 2.12.0.",
         mime_type="text/markdown",
     )
     def application_guidance_resource() -> str:

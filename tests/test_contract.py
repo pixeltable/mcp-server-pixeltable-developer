@@ -81,7 +81,7 @@ async def test_discovery_has_exact_typed_surface(server_config: ServerConfig) ->
 
     assert server_info is not None
     assert server_info.name == "pixeltable-developer"
-    assert server_info.version == "0.2.0"
+    assert server_info.version == "0.2.1"
     assert [tool.name for tool in tools_result.tools] == DEFAULT_TOOLS
     assert {str(resource.uri): resource.mime_type for resource in resources_result.resources} == RESOURCE_MIME_TYPES
     assert [prompt.name for prompt in prompts_result.prompts] == list(PROMPT_ARGUMENTS)
@@ -158,7 +158,7 @@ async def test_resources_are_typed_redacted_and_current(server_config: ServerCon
     installed_pixeltable = distribution_version("pixeltable")
     assert status == {
         "server_name": "pixeltable-developer",
-        "server_version": "0.2.0",
+        "server_version": "0.2.1",
         "mcp_version": installed_mcp,
         "pixeltable_version": installed_pixeltable,
         "project": server_config.project_root.name,
@@ -169,7 +169,7 @@ async def test_resources_are_typed_redacted_and_current(server_config: ServerCon
     # supported lines pyproject.toml declares. Asserting exact patch versions here made
     # the unlocked CI job fail on every upstream release.
     assert Version("2.2") <= Version(installed_mcp) < Version("3")
-    assert Version("0.7.6") <= Version(installed_pixeltable) < Version("0.8")
+    assert Version("0.7.10") <= Version(installed_pixeltable) < Version("0.8")
     assert str(server_config.project_root) not in status_content.text
 
     app_content = app_result.contents[0]
@@ -179,10 +179,15 @@ async def test_resources_are_typed_redacted_and_current(server_config: ServerCon
     app_text = app_content.text
     assert "from `pixeltable.serving`" in app_text
     assert "computed columns use assignments" in app_text
-    assert "--allow-destructive` does not make" in app_text
+    assert "even with `--allow-destructive`" in app_text
+    # Pixeltable 0.7.10+ alters a same-type expression in place and keeps old values.
+    assert "pxt recompute TABLE COLUMN -f" in app_text
     assert "pxt.Required" in app_text and "Do not use" in app_text
     cloud_text = cloud_content.text
     assert "not live-tested" in cloud_text
+    assert "pxt login" in cloud_text
+    # A `secrets` mapping in pixeltable.toml makes the database entry fail to load.
+    assert "pxt secret set" in cloud_text
     assert "pxt db update" in cloud_text
     assert "pxt schema update" in cloud_text
     assert "pxt service update" in cloud_text
@@ -271,7 +276,7 @@ async def test_row_tools_explain_a_missing_primary_key(
             content = result.content[0]
             assert isinstance(content, TextContent)
             assert "demo/docs has no primary key" in content.text, name
-            assert "pxt.Column(type=pxt.Int, primary_key=True)" in content.text, name
+            assert "pxt.Column(value=pxtf.uuid.uuid7(), primary_key=True)" in content.text, name
             assert "pixeltable_rows" in content.text, name
             # The bare CLI status code is replaced, not merely appended to.
             assert "422" not in content.text, name

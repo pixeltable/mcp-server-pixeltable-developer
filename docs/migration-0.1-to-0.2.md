@@ -205,17 +205,18 @@ Application files follow these rules:
 
 ### Computed-column changes
 
-Changing an existing computed-column expression in place is unsupported in the
-application schema workflow. `--allow-destructive` does not make that update
-valid. Rename the column and apply the reviewed destructive diff, or drop it in
-one update and add it in a later update. Use `pixeltable_recompute` for retrying
-failed existing cells; it does not replace a column's definition.
+From Pixeltable 0.7.10, editing a computed-column expression and applying the
+schema alters the column in place when its type is unchanged. The update keeps
+existing values; refresh them with `pixeltable_recompute` and `errors_only=false`.
+Changing a column's type is still unsupported, and `--allow-destructive` does
+not make that update valid: rename the computed column and apply the reviewed
+destructive diff.
 
 ### Cloud preparation
 
-The same `app.py` is used for Cloud. Set `PIXELTABLE_API_KEY`, configure the
-target `pxt://org:db`, and use `pixeltable://guidance/cloud` to prepare the
-commands. The 0.2 server does not make paid provider calls, create Cloud
+The same `app.py` is used for Cloud. Sign in with `pxt login` (or set
+`PIXELTABLE_API_KEY`), declare the target `pxt://org:db` in `pixeltable.toml`,
+and use `pixeltable://guidance/cloud` to prepare the commands. The 0.2 server does not make paid provider calls, create Cloud
 resources, or deploy automatically. Review every `db`, `schema`, and `service`
 change before running it.
 

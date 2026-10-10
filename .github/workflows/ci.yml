@@ -87,8 +87,8 @@ jobs:
           import mcp_server_pixeltable_developer
           import mcp_server_pixeltable_stio
 
-          assert mcp_server_pixeltable_developer.__version__ == "0.2.0"
-          assert mcp_server_pixeltable_stio.__version__ == "0.2.0"
+          assert mcp_server_pixeltable_developer.__version__ == "0.2.1"
+          assert mcp_server_pixeltable_stio.__version__ == "0.2.1"
           PY
 
   minimum-bounds:
@@ -107,7 +107,7 @@ jobs:
           uv venv --python 3.11 .venv-minimum
           uv pip install --python .venv-minimum/bin/python \
             'mcp[cli]==2.2.0' \
-            'pixeltable[serve]==0.7.6' \
+            'pixeltable[serve]==0.7.10' \
             -e '.[test,canvas]'
 
       - name: Verify exact versions
@@ -116,7 +116,7 @@ jobs:
           from importlib.metadata import version
 
           assert version("mcp") == "2.2.0", version("mcp")
-          assert version("pixeltable") == "0.7.6", version("pixeltable")
+          assert version("pixeltable") == "0.7.10", version("pixeltable")
           PY
 
       - name: Run test suite at minimum runtime bounds

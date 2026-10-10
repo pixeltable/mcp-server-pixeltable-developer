@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "mcp-server-pixeltable-developer",
   "display_name": "Pixeltable Developer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Build, inspect, and operate Pixeltable applications from Claude.",
   "author": {
     "name": "Pixeltable",
