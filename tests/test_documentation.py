@@ -38,17 +38,17 @@ def _fenced_code(text: str) -> str:
 def test_release_metadata_and_lock_are_pinned_to_reviewed_lines() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
     project = metadata["project"]
-    assert project["version"] == "0.2.0"
+    assert project["version"] == "0.2.1"
     assert project["requires-python"] == ">=3.11"
     assert "mcp>=2.2,<3" in project["dependencies"]
-    assert "pixeltable[serve]>=0.7.6,<0.8" in project["dependencies"]
+    assert "pixeltable[serve]>=0.7.10,<0.8" in project["dependencies"]
     assert all(not dependency.startswith(("requests", "toml", "uvloop")) for dependency in project["dependencies"])
     assert project["scripts"]["mcp-server-pixeltable-developer"] == ("mcp_server_pixeltable_developer.__main__:main")
 
     lock = (ROOT / "uv.lock").read_text()
-    assert 'name = "mcp"\nversion = "2.2.0"' in lock
-    assert 'name = "pixeltable"\nversion = "0.7.6"' in lock
-    assert "9e6cdbe54f042b31786bede4a4cd4d68b361b31d75f34ea4e9c415146c901114" in lock
+    assert 'name = "mcp"\nversion = "2.3.0"' in lock
+    assert 'name = "pixeltable"\nversion = "0.7.16"' in lock
+    assert "cae29f15df9666d3efb14bde45e899122d4877961ebe0266c025882adb88a1ff" in lock
 
 
 def test_public_examples_do_not_use_retired_workflows() -> None:

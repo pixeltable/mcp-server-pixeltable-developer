@@ -1,4 +1,4 @@
-"""End-to-end Pixeltable 0.7.6 application, service, and recovery tests."""
+"""End-to-end Pixeltable 0.7 application, service, and recovery tests."""
 
 from __future__ import annotations
 
@@ -63,27 +63,6 @@ def _stop_service(config: ServerConfig, name: str) -> None:
     )
 
 
-def _scaffold_input_columns(description: dict[str, Any]) -> set[str]:
-    """Stored, caller-supplied columns of the scaffolded table: not computed, not the primary key."""
-    return {
-        name
-        for name, column in description["columns"].items()
-        if not column.get("is_computed") and not column.get("is_primary_key")
-    }
-
-
-def _scaffold_row(input_columns: set[str], **values: Any) -> dict[str, Any]:
-    """Keep only the values the scaffold accepts as input; a 0.7.8 scaffold has no `doc_id`."""
-    return {name: value for name, value in values.items() if name in input_columns}
-
-
-def _primary_key_columns(description: dict[str, Any]) -> list[str]:
-    value = description.get("primary_key")
-    if not value:
-        return []
-    return [value] if isinstance(value, str) else list(value)
-
-
 @pytest.mark.asyncio
 async def test_scaffold_schema_data_and_http_service_lifecycle(server_config: ServerConfig) -> None:
     service_started = False
@@ -118,17 +97,13 @@ async def test_scaffold_schema_data_and_http_service_lifecycle(server_config: Se
             assert description["has_default_idxs"] is False
             assert description["columns"]["title_upper"]["is_computed"] is True
 
-            # The scaffold's inputs changed across Pixeltable releases: 0.7.6 declares a stored `doc_id`
-            # the caller supplies; 0.7.8 replaced it with a uuid7 `id` computed on insert. Derive the row
-            # from the schema so one test holds at both bounds.
-            input_columns = _scaffold_input_columns(description)
+            # The scaffold's primary key is a uuid7 `id` computed on insert, so callers send only the inputs.
+            assert description["primary_key"] == ["id"]
+            assert description["columns"]["id"]["is_computed"] is True
             insertion = await _call(
                 client,
                 "pixeltable_insert_rows",
-                {
-                    "path": "trial/docs",
-                    "rows": [_scaffold_row(input_columns, doc_id=1, title="hello", body=None)],
-                },
+                {"path": "trial/docs", "rows": [{"title": "hello", "body": None}]},
             )
             assert insertion["num_rows"] == 1
 
@@ -149,17 +124,12 @@ async def test_scaffold_schema_data_and_http_service_lifecycle(server_config: Se
                 "title_upper": "HELLO",
                 "summary": "hello",
             }
-            primary_key = _primary_key_columns(description)
-            if primary_key:
-                # 0.7.8+: the generated key must round-trip through the row lookup.
-                fetched = await _call(
-                    client,
-                    "pixeltable_get_row",
-                    {"path": "trial/docs", "primary_key": [str(stored[column]) for column in primary_key]},
-                )
-                assert fetched["row"]["title_upper"] == "HELLO"
-            else:
-                assert stored["doc_id"] == 1
+            fetched = await _call(
+                client,
+                "pixeltable_get_row",
+                {"path": "trial/docs", "primary_key": [str(stored["id"])]},
+            )
+            assert fetched["row"]["title_upper"] == "HELLO"
 
             service_check = await _call(client, "pixeltable_service_check", {"app_file": "app.py"})
             assert service_check["valid"] is True
@@ -188,11 +158,11 @@ async def test_scaffold_schema_data_and_http_service_lifecycle(server_config: Se
             response = await asyncio.to_thread(
                 _post_json,
                 f"{endpoint}/docs",
-                _scaffold_row(input_columns, doc_id=2, title="served", body="body"),
+                {"title": "served", "body": "body"},
             )
-            # Both releases return the computed columns; 0.7.8 also returns the generated key.
             assert response["title_upper"] == "SERVED"
             assert response["summary"] == "served"
+            assert response["id"]
 
             await _call(
                 client,
@@ -353,8 +323,41 @@ async def test_errors_only_recovery_and_schema_evolution(server_config: ServerCo
             },
         )
 
+        # Same type, new expression: Pixeltable 0.7.10+ alters the column in place and keeps the stored
+        # values, so a full recompute is what refreshes them.
         changed_expression = original.replace("recovered = recover(value)", "recovered = pxtf.string.lower(value)")
         app_file.write_text(changed_expression)
+        altered = await _call(
+            client,
+            "pixeltable_schema_diff",
+            {"schema_file": "app.py", "target": "recovery"},
+        )
+        assert altered["details"]["summary"]["update_additive"] == 1
+        assert altered["details"]["summary"]["unsupported"] == 0
+        assert [op["op"] for op in altered["details"]["tables"][0]["ops"]] == ["alter"]
+        await _call(
+            client,
+            "pixeltable_schema_update",
+            {"schema_file": "app.py", "target": "recovery"},
+        )
+        kept = await _call(client, "pixeltable_get_row", {"path": "recovery/items", "primary_key": ["2"]})
+        assert kept["row"]["recovered"] == "TWO"
+        refresh = await _call(
+            client,
+            "pixeltable_recompute",
+            {"path": "recovery/items", "columns": ["recovered"], "errors_only": False},
+        )
+        assert refresh["pending"] is True
+        await _call(
+            client,
+            "pixeltable_recompute",
+            {"path": "recovery/items", "columns": ["recovered"], "errors_only": False, "dry_run": False},
+        )
+        refreshed = await _call(client, "pixeltable_get_row", {"path": "recovery/items", "primary_key": ["2"]})
+        assert refreshed["row"]["recovered"] == "two"
+
+        # A type change is still unsupported, and --allow-destructive does not make it supported.
+        app_file.write_text(original.replace("recovered = recover(value)", "recovered = pxtf.string.len(value)"))
         unsupported = await _call(
             client,
             "pixeltable_schema_diff",

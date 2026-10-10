@@ -127,12 +127,11 @@ def _service_info(payload: Any) -> ServiceInfo:
 
 NO_PRIMARY_KEY_MARKER = "no primary key defined"
 
-# Before Pixeltable 0.7.8, `pxt service example` scaffolded a model without a primary key, so the first
-# call an agent made to a row-addressed tool failed with a bare 422. Explain the requirement and the
-# way out instead of repeating the status code.
+# A model written without a primary key makes the first row-addressed call fail with a bare 422.
+# Explain the requirement and the way out instead of repeating the status code.
 PRIMARY_KEY_REMEDY = (
     "Declare one in the model as an assignment, for example "
-    "`id = pxt.Column(type=pxt.Int, primary_key=True)`, and apply that schema to a new table. "
+    "`id = pxt.Column(value=pxtf.uuid.uuid7(), primary_key=True)`, and apply that schema to a new table. "
     "Pixeltable cannot add a primary key to a table that already exists."
 )
 

@@ -91,5 +91,7 @@ Describe the table, list errors filtered to `{column}`, and inspect the input
 columns the expression depends on. Fix the source data, configuration, provider
 credentials, or application code that caused the error. Preview
 `pxt recompute {table} {column} --errors-only -n`; apply it with `-f` only after the
-preview is correct. If the computed expression itself changed, rename the column
-or drop and re-add it because in-place expression migration is unsupported."""
+preview is correct. If the fix changes the computed expression, apply it with a
+schema update, then recompute without `--errors-only`: the update keeps existing
+values. If the column's type must change, rename the column, because an in-place
+type change is unsupported."""
