@@ -15,11 +15,7 @@ startCommand:
     |-
     (config) => ({
       command: "uvx",
-      args: [
-        "--from",
-        "git+https://github.com/pixeltable/mcp-server-pixeltable-developer.git",
-        "mcp-server-pixeltable-developer"
-      ],
+      args: ["mcp-server-pixeltable-developer"],
       env: {
         ...(config.projectRoot ? { PIXELTABLE_MCP_PROJECT_ROOT: config.projectRoot } : {}),
         ...(config.pixeltableHome ? { PIXELTABLE_HOME: config.pixeltableHome } : {})
