@@ -64,6 +64,7 @@ packages = [
 include = [
     "/src",
     "/README.md",
+    "/CHANGELOG.md",
     "/LICENSE",
     "/canvas.html",
     "/docs",

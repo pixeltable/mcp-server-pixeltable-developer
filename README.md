@@ -2,60 +2,28 @@
 
 <!-- mcp-name: io.github.pixeltable/mcp-server-pixeltable-developer -->
 
-A local Model Context Protocol server for building, inspecting, and operating
-[Pixeltable](https://pixeltable.com/) applications. Version 0.2 follows the
-application-first workflow in [pixeltable-skill 2.12.0](https://github.com/pixeltable/pixeltable-skill/blob/67f5a4222ce325420c461606c099e9ee0f9c9c02/skills/pixeltable-skill/SKILL.md): generate one `app.py`, apply its schema, and serve its routes with the `pxt` CLI.
+[![PyPI](https://img.shields.io/pypi/v/mcp-server-pixeltable-developer)](https://pypi.org/project/mcp-server-pixeltable-developer/)
+[![CI](https://github.com/pixeltable/mcp-server-pixeltable-developer/actions/workflows/ci.yml/badge.svg)](https://github.com/pixeltable/mcp-server-pixeltable-developer/actions/workflows/ci.yml)
+[![Glama score](https://glama.ai/mcp/servers/pixeltable/mcp-server-pixeltable-developer/badges/score.svg)](https://glama.ai/mcp/servers/pixeltable/mcp-server-pixeltable-developer)
 
-## Compatibility
+A local MCP server for building and operating [Pixeltable](https://pixeltable.com/)
+applications. Through the `pxt` CLI, an agent scaffolds one `app.py`, applies its
+tables to a catalog, inserts and inspects rows, recovers failed computations, and
+serves HTTP routes. It is a beta developer tool: it runs with your permissions and
+changes the catalog you point it at.
 
-| Component | Supported line |
-|---|---|
-| Python | 3.11 or newer |
-| Pixeltable | `>=0.7.10,<0.8` with the `serve` extra |
-| MCP Python SDK | `>=2.2,<3` |
-| Pixeltable skill | 2.12.0 |
-| Production transport | local `stdio` |
+## Quick start
 
-The server is a **beta developer tool**. It runs with the permissions of the
-process that launched it and can mutate the selected Pixeltable catalog. Point
-`PIXELTABLE_MCP_PROJECT_ROOT` at the application directory and `PIXELTABLE_HOME`
-at the intended catalog before startup. Both locations are fixed for the life of
-the process. Use a separate catalog for evaluation and automated tests.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/). The server is on
+[PyPI](https://pypi.org/project/mcp-server-pixeltable-developer/), and `uvx` downloads and runs it.
 
-## Install and connect
-
-Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/), then run the server from PyPI:
+Claude Code:
 
 ```bash
-uvx mcp-server-pixeltable-developer --version
+claude mcp add pixeltable -e PIXELTABLE_MCP_PROJECT_ROOT=/absolute/path/to/app -e PIXELTABLE_HOME=/absolute/path/to/.pixeltable -- uvx mcp-server-pixeltable-developer
 ```
 
-For reproducible development from a clone:
-
-```bash
-git clone https://github.com/pixeltable/mcp-server-pixeltable-developer.git
-cd mcp-server-pixeltable-developer
-uv sync --frozen --extra test
-```
-
-The repository also builds a container image that runs the same `stdio` server.
-Mount your application directory, and keep the catalog in a named volume so it
-persists across runs. Do not bind-mount a catalog from a macOS host: Postgres
-cannot set permissions on that directory, and `initdb` fails. On macOS, the
-application path must be shared with your container engine, or the mount lands
-inside its VM:
-
-```bash
-docker build -t mcp-server-pixeltable-developer .
-docker run --rm -i \
-  -e PIXELTABLE_MCP_PROJECT_ROOT=/work/app -e PIXELTABLE_HOME=/work/catalog \
-  -v /absolute/path/to/pixeltable-app:/work/app \
-  -v pixeltable-catalog:/work/catalog \
-  mcp-server-pixeltable-developer
-```
-
-Configure a client to launch the server over `stdio`. Replace the application
-project and catalog paths with absolute paths:
+Other clients (Claude Desktop, Cursor, VS Code, and so on):
 
 ```json
 {
@@ -64,7 +32,7 @@ project and catalog paths with absolute paths:
       "command": "uvx",
       "args": ["mcp-server-pixeltable-developer"],
       "env": {
-        "PIXELTABLE_MCP_PROJECT_ROOT": "/absolute/path/to/pixeltable-app",
+        "PIXELTABLE_MCP_PROJECT_ROOT": "/absolute/path/to/app",
         "PIXELTABLE_HOME": "/absolute/path/to/.pixeltable"
       }
     }
@@ -72,33 +40,45 @@ project and catalog paths with absolute paths:
 }
 ```
 
-Claude Code:
+The app directory must exist. An empty one is fine: the server can scaffold `app.py`
+there. Restart the client after changing its configuration.
+
+| Variable | Required | Effect |
+|---|---|---|
+| `PIXELTABLE_MCP_PROJECT_ROOT` | yes | Directory holding `app.py`. File arguments outside it are refused. |
+| `PIXELTABLE_HOME` | yes | Catalog the server reads and changes. `~/.pixeltable` is the one the `pxt` CLI uses; use a separate catalog for tests. |
+| `PXT_PORT` | no | Port of the server's `pxt` daemon, 22089 by default. One daemon serves one project per port, and a `pxt` command from another project restarts it, so in-flight calls fail with `RemoteDisconnected`. If you run `pxt` for another project at the same time, set a free port such as `22090`. |
+| `PIXELTABLE_MCP_ENABLE_UNSAFE` | no | `1` adds tools that run arbitrary Python and install packages. See [Unsafe mode](#unsafe-mode). |
+| `PIXELTABLE_MCP_PXT` | no | A specific `pxt` executable. By default the server uses the one installed beside it. |
+
+Both paths are fixed for the life of the process. Run one server per catalog when it
+applies schema or service changes.
+
+## Other ways to run it
+
+| Channel | What you get |
+|---|---|
+| Official MCP Registry | `io.github.pixeltable/mcp-server-pixeltable-developer`. Clients that browse the registry install the PyPI package. |
+| [Claude plugin](plugin/) | Uses the open project as the app directory, `~/.pixeltable` as the default catalog, and port 22090. |
+| [Glama](https://glama.ai/mcp/servers/pixeltable/mcp-server-pixeltable-developer) | Directory listing with a quality score. |
+| Docker | An image built from this repository. See below. |
+| A clone | `"command": "uv"`, `"args": ["run", "--directory", "/absolute/path/to/clone", "mcp-server-pixeltable-developer"]` |
+
+Docker: mount the app directory, and keep the catalog in a named volume so it persists.
+Do not bind-mount a catalog from a macOS host: Postgres cannot set permissions on that
+directory, and `initdb` fails. On macOS, the app path must also be shared with your
+container engine, or the mount lands inside its VM.
 
 ```bash
-claude mcp add pixeltable -e PIXELTABLE_MCP_PROJECT_ROOT=/absolute/path/to/pixeltable-app -e PIXELTABLE_HOME=/absolute/path/to/.pixeltable -- uvx mcp-server-pixeltable-developer
+docker build -t mcp-server-pixeltable-developer .
+docker run --rm -i \
+  -e PIXELTABLE_MCP_PROJECT_ROOT=/work/app -e PIXELTABLE_HOME=/work/catalog \
+  -v /absolute/path/to/app:/work/app \
+  -v pixeltable-catalog:/work/catalog \
+  mcp-server-pixeltable-developer
 ```
 
-The [`plugin/`](plugin/) folder is a Claude plugin with the same server: it uses the open project as the app
-directory, `~/.pixeltable` as the default catalog, and port 22090 for its `pxt` daemon.
-
-To run a clone instead, use `"command": "uv"` with
-`"args": ["run", "--directory", "/absolute/path/to/mcp-server-pixeltable-developer", "mcp-server-pixeltable-developer"]`.
-
-Restart the client after changing its MCP configuration. Keep one server
-process per catalog when performing schema or service mutations.
-
-The `pxt` CLI talks to one local daemon per port (22089 by default), and a
-`pxt` command from a different project root restarts that daemon. If you run
-`pxt` for another project while the server is working, its calls can fail with
-`RemoteDisconnected`. Give the server its own port by adding
-`"PXT_PORT": "22090"` (any free port) to `env`.
-
-## Default interface
-
-Version 0.2 exposes a focused interface instead of mirroring the whole
-Pixeltable Python API.
-
-### Tools
+## What the server exposes
 
 | Area | Tools |
 |---|---|
@@ -108,60 +88,26 @@ Pixeltable Python API.
 | Schema lifecycle | `pixeltable_schema_check`, `pixeltable_schema_diff`, `pixeltable_schema_update`, `pixeltable_schema_prune` |
 | Service lifecycle | `pixeltable_service_check`, `pixeltable_service_diff`, `pixeltable_service_update`, `pixeltable_service_list`, `pixeltable_service_stop`, `pixeltable_service_prune` |
 
-Read tools declare read-only MCP annotations. Mutation tools declare their
-write and destructive behavior. Arguments and results use typed schemas, and
-recoverable failures are returned as MCP tool errors so clients can retry with
-corrected input.
+Read tools carry read-only annotations; mutation tools declare write and destructive
+behavior. Prune tools default to dry runs. Failures come back as MCP tool errors, so a
+client can retry with corrected input.
 
-### Resources
-
-| URI | Purpose |
+| Resource | Content |
 |---|---|
-| `pixeltable://status` | Server, dependency, transport, catalog, and unsafe-mode status |
-| `pixeltable://catalog` | Current catalog inventory |
-| `pixeltable://guidance/app` | Pixeltable 0.7 application workflow |
-| `pixeltable://guidance/cloud` | Cloud preparation guidance; it does not deploy resources |
+| `pixeltable://status` | Server, Pixeltable, and MCP versions, transport, and unsafe-mode state |
+| `pixeltable://catalog` | Catalog inventory |
+| `pixeltable://guidance/app` | The application workflow below |
+| `pixeltable://guidance/cloud` | Cloud preparation steps; the server deploys nothing |
 
-### Prompts
+Prompts: `pixeltable_build_app`, `pixeltable_build_rag`, `pixeltable_build_agent`, and
+`pixeltable_debug_computation`. They follow
+[pixeltable-skill 2.12.0](https://github.com/pixeltable/pixeltable-skill/blob/67f5a4222ce325420c461606c099e9ee0f9c9c02/skills/pixeltable-skill/SKILL.md),
+which stays the detailed reference for providers, multimodal views, indexes, tool
+calling, and serving.
 
-- `pixeltable_build_app`
-- `pixeltable_build_rag`
-- `pixeltable_build_agent`
-- `pixeltable_debug_computation`
+## Pixeltable workflow
 
-The prompts are short task guides aligned with pixeltable-skill 2.12.0. The
-skill remains the detailed source for provider output shapes, multimodal views,
-indexes, tool calling, serving, debugging, and Cloud workflows.
-
-## Unsafe mode
-
-Host-code execution, package installation, and browser display are disabled by
-default. A trusted local user can opt in before starting the server:
-
-```bash
-export PIXELTABLE_MCP_ENABLE_UNSAFE=1
-```
-
-This adds:
-
-- `pixeltable_unsafe_execute_python`
-- `pixeltable_unsafe_install_package`
-- `pixeltable_unsafe_display`
-
-These tools are available only on `stdio`. They can execute arbitrary Python,
-change the server environment, read files available to the server process, and
-render untrusted content. Enable them only for a trusted, local MCP client and
-a disposable development environment. Do not expose unsafe mode through an
-HTTP transport.
-
-The repository may use an in-process or HTTP harness in tests. HTTP is not a
-supported production transport for version 0.2. A future HTTP release must add
-authorization, concurrency and request limits, origin and host validation,
-per-principal isolation, and an explicit threat model before it is supported.
-
-## Recommended Pixeltable workflow
-
-Start an application with the current Pixeltable CLI:
+These are the commands the tools wrap:
 
 ```bash
 pip install 'pixeltable[serve]>=0.7.10,<0.8'
@@ -170,63 +116,70 @@ pxt service example --out app.py
 pxt schema check app.py
 pxt schema diff app.py my_app
 pxt schema update app.py my_app
-pxt service check app.py
 pxt service update app.py my_app
 pxt service list
 ```
 
-`my_app` is a catalog directory. It is not a filesystem directory. Edit
-`app.py` and apply the schema again when the model changes. Apply the service
-again after route changes. Use `pxt service list` to discover the assigned URL.
+- `my_app` is a catalog directory, not a folder on disk. `pxt service list` shows the assigned URL.
+- In `app.py`, stored columns are annotations and computed columns are assignments.
+  Types are non-nullable; write `T | None` for an optional column. Do not use `pxt.Required`.
+- To change a computed expression, edit it and update the schema. The update keeps
+  existing values, so run `pxt recompute my_app/docs COLUMN -f` to refresh them. A type
+  change is unsupported in place; rename the computed column instead.
+- Cloud uses the same `app.py`: `pxt login`, a `[[pixeltable.database]]` entry in
+  `pixeltable.toml`, and provider keys through `pxt secret set`, never in the TOML.
+  `pixeltable://guidance/cloud` lists the order. The server creates no paid resources.
 
-The application file should declare `TableModel` classes and, when HTTP routes
-are needed, a `FastAPIRouter`. Stored columns use annotations. Computed columns
-use assignments. Types are non-nullable by default; write `T | None` for an
-optional column. Do not use `pxt.Required`.
+## Unsafe mode
 
-Schema updates intentionally require a review step. `schema_check` validates
-the file, `schema_diff` previews catalog changes, and `schema_update` applies
-them. Prune operations are separate because they can remove catalog objects.
-To change a computed-column expression, edit it and apply the schema again:
-the update keeps existing values, so run `pxt recompute my_app/docs COLUMN -f`
-to refresh them. Changing a column's type is unsupported in place; rename a
-computed column instead.
+`PIXELTABLE_MCP_ENABLE_UNSAFE=1` adds `pixeltable_unsafe_execute_python`,
+`pixeltable_unsafe_install_package`, and `pixeltable_unsafe_display`. They run arbitrary
+Python, change the server's environment, read any file the process can, and render
+untrusted content in a browser canvas. They exist only over `stdio`: enable them for a
+trusted local client in a disposable environment. HTTP is not a supported transport.
 
-For Cloud, prepare the same `app.py`, sign in with `pxt login` (or set
-`PIXELTABLE_API_KEY`), declare the target `pxt://org:db` in `pixeltable.toml`,
-and review `pixeltable://guidance/cloud`. The MCP server does not create paid
-resources or deploy to Cloud automatically.
+## Compatibility
+
+| Component | Supported |
+|---|---|
+| Python | 3.11 or newer; CI tests 3.11 to 3.14 |
+| Pixeltable | `>=0.7.10,<0.8` with the `serve` extra, locked at 0.7.16 |
+| MCP Python SDK | `>=2.2,<3`, locked at 2.3.0 |
+| Transport | local `stdio` |
+
+## Releases
+
+[CHANGELOG.md](CHANGELOG.md) lists what each version changed. 0.2.1 is the first PyPI release.
+
+To ship a version:
+
+1. Bump the version in `pyproject.toml`, `src/mcp_server_pixeltable_developer/__init__.py`,
+   `server.json` (twice), `mcpb/manifest.json`, `plugin/.claude-plugin/plugin.json`
+   (version and `uvx` pin), and the assertions in `.github/workflows/ci.yml` and the tests.
+   Run `uv lock`. The tests fail until every copy agrees.
+2. Merge, then push the tag `vX.Y.Z`. CI reruns every check, publishes to PyPI with
+   trusted publishing, then publishes `server.json` to the MCP Registry with GitHub OIDC.
+3. If the registry step fails, rerun it without a new tag:
+   `gh workflow run mcp-registry.yml --repo pixeltable/mcp-server-pixeltable-developer --ref main`.
+
+Glama syncs from GitHub. The Docker MCP Catalog entry (`servers/pixeltable/server.yaml`
+in docker/mcp-registry) pins a commit, so it needs a PR per release.
 
 ## Develop and verify
 
-Use a disposable catalog:
-
 ```bash
-export PIXELTABLE_MCP_PROJECT_ROOT="$PWD"
-export PIXELTABLE_HOME="$(mktemp -d)/catalog"
-uv sync --frozen --extra test
+uv sync --frozen --extra test --extra canvas
 uv run pytest -q
-PIXELTABLE_DISABLE_STDOUT=1 uv run pytest --run-slow -q
-uv run python list_tools.py
+PIXELTABLE_DISABLE_STDOUT=1 uv run pytest -q --run-slow
+uv run ruff check . && uv run ruff format --check . && uv run pyright
 ./scripts/run-conformance.sh
 ./scripts/build-mcpb.sh
 ```
 
-`build-mcpb.sh` writes the desktop-extension bundle to `dist/` from tracked files
-only. Pushing a `v*` tag publishes to PyPI through trusted publishing once the test,
-quality, bounds, conformance, and evaluation-artifact jobs pass; register this
-repository, workflow `ci.yml`, and environment `pypi` as a trusted publisher on
-PyPI one time before the first tag.
-
-Run the MCP Inspector only as a local test harness:
-
-```bash
-uv run mcp dev src/mcp_server_pixeltable_developer/server.py:mcp
-```
-
-Before release, also run the latest-dependency compatibility job, the MCP
-in-memory contract tests, the subprocess `stdio` smoke test, lint, type checks,
-and package build verification described in the review report.
+`--run-slow` runs real catalogs and services in temporary directories, each on its own
+daemon port. `build-mcpb.sh` writes the Claude Desktop bundle to `dist/`. For manual
+testing, run the MCP Inspector against the server:
+`uv run mcp dev src/mcp_server_pixeltable_developer/server.py:mcp`.
 
 ## Privacy Policy
 
@@ -259,13 +212,11 @@ process. Enable it only on a trusted local machine.
 
 ## Documentation
 
-- [0.1.0 evidence review](docs/review-0.1.0.md)
-- [0.2.0 implementation review](docs/review-0.2.0.md)
+- [Changelog](CHANGELOG.md)
 - [Migration from 0.1 to 0.2](docs/migration-0.1-to-0.2.md)
+- [0.2.0 implementation review](docs/review-0.2.0.md) and [0.1.0 evidence review](docs/review-0.1.0.md)
 - [Agent evaluation protocol](evals/README.md)
-- [Pixeltable documentation](https://docs.pixeltable.com/)
-- [Pixeltable get started](https://www.pixeltable.com/get-started.md)
-- [Pixeltable LLM reference](https://www.pixeltable.com/llms.txt)
+- [Pixeltable documentation](https://docs.pixeltable.com/) and [LLM reference](https://www.pixeltable.com/llms.txt)
 - [MCP Python SDK 2 documentation](https://py.sdk.modelcontextprotocol.io/v2/)
 
 ## License
