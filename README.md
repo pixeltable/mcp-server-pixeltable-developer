@@ -39,16 +39,18 @@ uv sync --frozen --extra test
 ```
 
 The repository also builds a container image that runs the same `stdio` server.
-Mount your application directory and point both variables at the mounts; the
-catalog is lost with the container unless you mount one too. On macOS, the host
-paths must be shared with your container engine, or the mount lands inside its VM:
+Mount your application directory, and keep the catalog in a named volume so it
+persists across runs. Do not bind-mount a catalog from a macOS host: Postgres
+cannot set permissions on that directory, and `initdb` fails. On macOS, the
+application path must be shared with your container engine, or the mount lands
+inside its VM:
 
 ```bash
 docker build -t mcp-server-pixeltable-developer .
 docker run --rm -i \
   -e PIXELTABLE_MCP_PROJECT_ROOT=/work/app -e PIXELTABLE_HOME=/work/catalog \
   -v /absolute/path/to/pixeltable-app:/work/app \
-  -v /absolute/path/to/.pixeltable:/work/catalog \
+  -v pixeltable-catalog:/work/catalog \
   mcp-server-pixeltable-developer
 ```
 
