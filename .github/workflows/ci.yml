@@ -196,7 +196,7 @@ jobs:
     timeout-minutes: 15
     environment: pypi
     permissions:
-      contents: read
+      contents: write # create the GitHub Release
       id-token: write
     steps:
       - name: Checkout
@@ -205,11 +205,15 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
-      - name: Verify the tag matches the package version
+      - name: Verify the tag matches the package version and the changelog
         run: |
           version="$(uv version --short)"
           if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
             echo "tag ${GITHUB_REF_NAME} does not match package version ${version}" >&2
+            exit 1
+          fi
+          if ! grep -qE "^## ${version//./\\.}( |$)" CHANGELOG.md; then
+            echo "CHANGELOG.md has no section for ${version}" >&2
             exit 1
           fi
 
@@ -218,6 +222,15 @@ jobs:
 
       - name: Publish with PyPI trusted publishing
         run: uv publish --trusted-publishing always
+
+      # The Release carries the files PyPI received and the version's CHANGELOG.md section.
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes="$(awk -v v="${version}" 'index($0, "## " v " ") == 1 || $0 == "## " v {f=1; next} /^## / {f=0} f' CHANGELOG.md)"
+          gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --latest --title "${GITHUB_REF_NAME}" --notes "${notes}"
 
   publish-mcp-registry:
     name: publish to the MCP Registry (tags)

@@ -156,9 +156,11 @@ To ship a version:
 1. Bump the version in `pyproject.toml`, `src/mcp_server_pixeltable_developer/__init__.py`,
    `server.json` (twice), `mcpb/manifest.json`, `plugin/.claude-plugin/plugin.json`
    (version and `uvx` pin), and the assertions in `.github/workflows/ci.yml` and the tests.
-   Run `uv lock`. The tests fail until every copy agrees.
+   Add a `## X.Y.Z` section to `CHANGELOG.md` and run `uv lock`. The tests fail until
+   every copy agrees.
 2. Merge, then push the tag `vX.Y.Z`. CI reruns every check, publishes to PyPI with
-   trusted publishing, then publishes `server.json` to the MCP Registry with GitHub OIDC.
+   trusted publishing, creates the GitHub Release from the changelog section, then
+   publishes `server.json` to the MCP Registry with GitHub OIDC.
 3. If the registry step fails, rerun it without a new tag:
    `gh workflow run mcp-registry.yml --repo pixeltable/mcp-server-pixeltable-developer --ref main`.
 
