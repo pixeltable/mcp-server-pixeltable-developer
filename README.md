@@ -76,6 +76,9 @@ Claude Code:
 claude mcp add pixeltable -e PIXELTABLE_MCP_PROJECT_ROOT=/absolute/path/to/pixeltable-app -e PIXELTABLE_HOME=/absolute/path/to/.pixeltable -- uvx mcp-server-pixeltable-developer
 ```
 
+The [`plugin/`](plugin/) folder is a Claude plugin with the same server: it uses the open project as the app
+directory, `~/.pixeltable` as the default catalog, and port 22090 for its `pxt` daemon.
+
 To run a clone instead, use `"command": "uv"` with
 `"args": ["run", "--directory", "/absolute/path/to/mcp-server-pixeltable-developer", "mcp-server-pixeltable-developer"]`.
 
