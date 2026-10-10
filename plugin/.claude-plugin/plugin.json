@@ -1,0 +1,49 @@
+{
+  "name": "pixeltable-developer",
+  "displayName": "Pixeltable Developer (Local MCP)",
+  "version": "0.2.1",
+  "description": "The backend agents build with, on your machine: a local MCP server that scaffolds app.py, inspects your Pixeltable catalog, inserts rows, and applies schema and service changes for the current project. Requires uv.",
+  "author": {
+    "name": "Pixeltable",
+    "url": "https://github.com/pixeltable"
+  },
+  "homepage": "https://github.com/pixeltable/mcp-server-pixeltable-developer",
+  "repository": "https://github.com/pixeltable/mcp-server-pixeltable-developer",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pixeltable",
+    "mcp",
+    "multimodal",
+    "database",
+    "orchestration",
+    "computed-columns",
+    "embeddings",
+    "rag",
+    "agents",
+    "backend"
+  ],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/pixeltable/mcp-server-pixeltable-developer#readme",
+  "supportUrl": "https://github.com/pixeltable/mcp-server-pixeltable-developer/issues",
+  "privacyPolicyUrl": "https://github.com/pixeltable/mcp-server-pixeltable-developer#privacy-policy",
+  "termsOfServiceUrl": "https://www.pixeltable.com/terms",
+  "userConfig": {
+    "pixeltable_home": {
+      "type": "string",
+      "title": "Pixeltable catalog directory",
+      "description": "The catalog the server reads and changes. The default is the one the pxt CLI uses.",
+      "default": "~/.pixeltable"
+    }
+  },
+  "mcpServers": {
+    "pixeltable-developer": {
+      "command": "uvx",
+      "args": ["mcp-server-pixeltable-developer==0.2.1"],
+      "env": {
+        "PIXELTABLE_MCP_PROJECT_ROOT": "${CLAUDE_PROJECT_DIR}",
+        "PIXELTABLE_HOME": "${user_config.pixeltable_home}",
+        "PXT_PORT": "22090"
+      }
+    }
+  }
+}

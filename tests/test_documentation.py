@@ -121,7 +121,8 @@ def test_evidence_report_is_reproducible_and_explicit_about_boundaries() -> None
 
 
 def test_packaging_metadata_agrees_with_pyproject_and_the_served_contract() -> None:
-    """The bundle manifest, registry entry, and Smithery config are submitted for review, so they must not drift."""
+    """The bundle manifest, registry entry, Smithery config, and Claude plugin are submitted for review, so they must
+    not drift."""
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
     version = metadata["project"]["version"]
 
@@ -153,3 +154,12 @@ def test_packaging_metadata_agrees_with_pyproject_and_the_served_contract() -> N
 
     smithery = (ROOT / "smithery.yaml").read_text()
     assert "required: [projectRoot, pixeltableHome]" in smithery
+
+    plugin = json.loads((ROOT / "plugin" / ".claude-plugin" / "plugin.json").read_text())
+    assert plugin["version"] == version
+    server = plugin["mcpServers"]["pixeltable-developer"]
+    # The Claude directory blocks a uvx launch that is not pinned to an exact version.
+    assert server["args"] == [f"{metadata['project']['name']}=={version}"]
+    assert server["env"]["PIXELTABLE_MCP_PROJECT_ROOT"] == "${CLAUDE_PROJECT_DIR}"
+    assert "PIXELTABLE_MCP_ENABLE_UNSAFE" not in server["env"]
+    assert plugin["privacyPolicyUrl"].startswith("https://")
