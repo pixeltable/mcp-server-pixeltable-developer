@@ -167,6 +167,8 @@ def test_packaging_metadata_agrees_with_pyproject_and_the_served_contract() -> N
     server = plugin["mcpServers"]["pixeltable-developer"]
     # The Claude directory blocks a uvx launch that is not pinned to an exact version.
     assert server["args"] == [f"{metadata['project']['name']}=={version}"]
-    assert server["env"]["PIXELTABLE_MCP_PROJECT_ROOT"] == "${CLAUDE_PROJECT_DIR}"
+    # In a plugin below the repository root, the directory blocks any ${...} but ${CLAUDE_PLUGIN_ROOT}. The server
+    # needs none: it defaults to its working directory, the open project, and to ~/.pixeltable.
+    assert "${" not in json.dumps(server).replace("${CLAUDE_PLUGIN_ROOT}", "")
     assert "PIXELTABLE_MCP_ENABLE_UNSAFE" not in server["env"]
     assert plugin["privacyPolicyUrl"].startswith("https://")
