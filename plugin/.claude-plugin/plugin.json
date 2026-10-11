@@ -27,21 +27,13 @@
   "supportUrl": "https://github.com/pixeltable/mcp-server-pixeltable-developer/issues",
   "privacyPolicyUrl": "https://github.com/pixeltable/mcp-server-pixeltable-developer#privacy-policy",
   "termsOfServiceUrl": "https://www.pixeltable.com/terms",
-  "userConfig": {
-    "pixeltable_home": {
-      "type": "string",
-      "title": "Pixeltable catalog directory",
-      "description": "The catalog the server reads and changes. The default is the one the pxt CLI uses.",
-      "default": "~/.pixeltable"
-    }
-  },
   "mcpServers": {
     "pixeltable-developer": {
       "command": "uvx",
-      "args": ["mcp-server-pixeltable-developer==0.2.1"],
+      "args": [
+        "mcp-server-pixeltable-developer==0.2.1"
+      ],
       "env": {
-        "PIXELTABLE_MCP_PROJECT_ROOT": "${CLAUDE_PROJECT_DIR}",
-        "PIXELTABLE_HOME": "${user_config.pixeltable_home}",
         "PXT_PORT": "22090"
       }
     }
