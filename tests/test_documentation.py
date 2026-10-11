@@ -51,6 +51,13 @@ def test_release_metadata_and_lock_are_pinned_to_reviewed_lines() -> None:
     assert "cae29f15df9666d3efb14bde45e899122d4877961ebe0266c025882adb88a1ff" in lock
 
 
+def test_changelog_has_a_section_for_the_package_version() -> None:
+    """The tag job copies this section into the GitHub Release and refuses a version without one."""
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+    headings = re.findall(r"^## (\S+)", (ROOT / "CHANGELOG.md").read_text(), flags=re.MULTILINE)
+    assert version in headings
+
+
 def test_public_examples_do_not_use_retired_workflows() -> None:
     public_docs = "\n".join((ROOT / path).read_text() for path in ["README.md", "docs/migration-0.1-to-0.2.md"])
     code = _fenced_code(public_docs)
