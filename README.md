@@ -154,8 +154,8 @@ trusted local client in a disposable environment. HTTP is not a supported transp
 To ship a version:
 
 1. Bump the version in `pyproject.toml`, `src/mcp_server_pixeltable_developer/__init__.py`,
-   `server.json` (twice), `mcpb/manifest.json`, `plugin/.claude-plugin/plugin.json`
-   (version and `uvx` pin), and the assertions in `.github/workflows/ci.yml` and the tests.
+   `server.json` (twice), `mcpb/manifest.json`, and the assertions in
+   `.github/workflows/ci.yml` and the tests.
    Add a `## X.Y.Z` section to `CHANGELOG.md` and run `uv lock`. The tests fail until
    every copy agrees.
 2. Merge, then push the tag `vX.Y.Z`. CI reruns every check, publishes to PyPI with
@@ -163,6 +163,11 @@ To ship a version:
    publishes `server.json` to the MCP Registry with GitHub OIDC.
 3. If the registry step fails, rerun it without a new tag:
    `gh workflow run mcp-registry.yml --repo pixeltable/mcp-server-pixeltable-developer --ref main`.
+4. Once PyPI has the release, bump the plugin in its own PR: set the version in
+   `plugin/.claude-plugin/plugin.json` and in `plugin/pyproject.toml` (version and
+   pin), then run `cp uv.lock plugin/uv.lock && uv lock --project plugin`. Copying the
+   root lock first keeps the dependency versions the release was tested with. The
+   tests fail if `plugin/uv.lock` reaches 256 KiB, the most the Claude directory reads.
 
 Glama syncs from GitHub. The Docker MCP Catalog entry (`servers/pixeltable/server.yaml`
 in docker/mcp-registry) pins a commit, so it needs a PR per release.

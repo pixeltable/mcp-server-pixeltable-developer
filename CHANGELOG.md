@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+**Distribution**
+- The Claude plugin runs the server with `uv run --isolated --frozen` from a `uv.lock` in
+  `plugin/`, which pins every dependency with its hash to the versions 0.2.1 was tested
+  with. The Claude directory requires the lockfile for its Verified badge.
+
 ## 0.2.1 (2026-10-10)
 
 First release on PyPI. Install with `uvx mcp-server-pixeltable-developer`.
