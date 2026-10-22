@@ -7,6 +7,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from packaging.version import Version
+
 ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_TOOL_NAMES = [
@@ -162,11 +164,30 @@ def test_packaging_metadata_agrees_with_pyproject_and_the_served_contract() -> N
     smithery = (ROOT / "smithery.yaml").read_text()
     assert "required: [projectRoot, pixeltableHome]" in smithery
 
+    # The plugin locks a PyPI release, so it can trail the package version until that release is uploaded.
     plugin = json.loads((ROOT / "plugin" / ".claude-plugin" / "plugin.json").read_text())
-    assert plugin["version"] == version
+    plugin_version = plugin["version"]
+    assert Version(plugin_version) <= Version(version)
     server = plugin["mcpServers"]["pixeltable-developer"]
-    # The Claude directory blocks a uvx launch that is not pinned to an exact version.
-    assert server["args"] == [f"{metadata['project']['name']}=={version}"]
+    # The Claude directory verifies a server only when it runs from a uv.lock inside the plugin. --isolated builds the
+    # environment in uv's cache, so nothing is written to the plugin root.
+    assert server["command"] == "uv"
+    assert server["args"] == [
+        "run",
+        "--isolated",
+        "--frozen",
+        "--project",
+        "${CLAUDE_PLUGIN_ROOT}",
+        metadata["project"]["name"],
+    ]
+    plugin_project = tomllib.loads((ROOT / "plugin" / "pyproject.toml").read_text())
+    assert plugin_project["project"]["version"] == plugin_version
+    assert plugin_project["project"]["dependencies"] == [f"{metadata['project']['name']}=={plugin_version}"]
+    plugin_lock = ROOT / "plugin" / "uv.lock"
+    locked = {pkg["name"]: pkg for pkg in tomllib.loads(plugin_lock.read_text())["package"]}
+    assert locked[metadata["project"]["name"]]["version"] == plugin_version
+    # The directory does not read a file over 256 KiB and holds the plugin for review.
+    assert plugin_lock.stat().st_size < 256 * 1024
     # In a plugin below the repository root, the directory blocks any ${...} but ${CLAUDE_PLUGIN_ROOT}. The server
     # needs none: it defaults to its working directory, the open project, and to ~/.pixeltable.
     assert "${" not in json.dumps(server).replace("${CLAUDE_PLUGIN_ROOT}", "")

@@ -29,9 +29,14 @@
   "termsOfServiceUrl": "https://www.pixeltable.com/terms",
   "mcpServers": {
     "pixeltable-developer": {
-      "command": "uvx",
+      "command": "uv",
       "args": [
-        "mcp-server-pixeltable-developer==0.2.1"
+        "run",
+        "--isolated",
+        "--frozen",
+        "--project",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "mcp-server-pixeltable-developer"
       ],
       "env": {
         "PXT_PORT": "22090"

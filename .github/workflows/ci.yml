@@ -75,6 +75,9 @@ jobs:
       - name: Static type check
         run: uv run --frozen pyright
 
+      - name: Check the plugin lockfile matches its pyproject
+        run: uv lock --check --project plugin
+
       - name: Build wheel and source distribution
         run: uv build
 

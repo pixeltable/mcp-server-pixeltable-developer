@@ -6,7 +6,7 @@ This plugin runs the Pixeltable developer MCP server for the project you open. T
 
 ## What it runs
 
-- `uvx` downloads `mcp-server-pixeltable-developer` 0.2.1 from PyPI and runs it on your machine over stdio. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first.
+- `uv run` installs `mcp-server-pixeltable-developer` 0.2.1 from PyPI with the exact dependency versions and hashes in this plugin's `uv.lock`, then runs it on your machine over stdio. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first; uv downloads Python 3.12 if you do not have it.
 - The app directory is the project you opened. The catalog is `~/.pixeltable`, the one the `pxt` CLI uses; to use another, set `PIXELTABLE_HOME` in the environment you start Claude Code from.
 - The server runs its own `pxt` daemon on port 22090, so it does not restart the daemon that your terminal's `pxt` uses on port 22089.
 - Mutation tools change the catalog and start or stop local services. The tools that run arbitrary Python or install packages stay off: the plugin does not set `PIXELTABLE_MCP_ENABLE_UNSAFE`.

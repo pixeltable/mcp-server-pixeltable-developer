@@ -1,0 +1,10 @@
+# Locks the server's dependencies for the plugin, so a user installs the versions the release was tested with.
+[project]
+name = "pixeltable-developer-plugin"
+version = "0.2.1"
+# One Python version keeps uv.lock under the 256 KiB that the Claude directory reads.
+requires-python = "==3.12.*"
+dependencies = ["mcp-server-pixeltable-developer==0.2.1"]
+
+[tool.uv]
+package = false
