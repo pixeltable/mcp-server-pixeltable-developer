@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**Guidance**
+- Cloud: the guidance and the README name the hosted Cloud MCP at
+  https://www.pixeltable.com/mcp/cloud, which reads a hosted database's rows and logs,
+  starts and stops it, restarts its services, and sets secrets. An agent with only this
+  server had no way to learn it exists.
+
 **Distribution**
 - The Claude plugin runs the server with `uv run --isolated --frozen` from a `uv.lock` in
   `plugin/`, which pins every dependency with its hash to the versions 0.2.1 was tested

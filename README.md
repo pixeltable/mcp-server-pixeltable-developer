@@ -12,6 +12,11 @@ tables to a catalog, inserts and inspects rows, recovers failed computations, an
 serves HTTP routes. It is a beta developer tool: it runs with your permissions and
 changes the catalog you point it at.
 
+For an app running on Pixeltable Cloud, the hosted
+[Cloud MCP](https://www.pixeltable.com/developers/mcp-cloud) reads and operates it
+from your MCP client after a browser sign-in, with nothing to install. This server
+is the one that builds `app.py` and applies it, locally or to a `pxt://` database.
+
 ## Quick start
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/). The server is on
