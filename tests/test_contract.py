@@ -191,6 +191,8 @@ async def test_resources_are_typed_redacted_and_current(server_config: ServerCon
     assert "pxt db update" in cloud_text
     assert "pxt schema update" in cloud_text
     assert "pxt service update" in cloud_text
+    # Agents learn of the hosted Cloud MCP only from this resource.
+    assert "https://www.pixeltable.com/mcp/cloud" in cloud_text
 
 
 @pytest.mark.asyncio

@@ -52,8 +52,11 @@ Cloud behavior in this server is source-reviewed but not live-tested. Review eac
 4. Run `pxt db diff`, then `pxt db update pxt://ORG:DATABASE -f`. The first update creates the database.
 5. Run `pxt schema diff` and `pxt schema update` against the hosted target.
 6. Run `pxt service diff` and `pxt service update` only after the database code and schema are current.
+7. To read the hosted database's status, rows, and logs from an agent, start or stop it, restart its services, or
+   set a secret, connect the hosted Cloud MCP at https://www.pixeltable.com/mcp/cloud. It cannot deploy, change
+   schema, or delete anything.
 
-The MCP schema and service tools accept explicit `pxt://` targets. They never
+This server's schema and service tools accept explicit `pxt://` targets. They never
 create databases or set secrets. A hosted `schema_update` or `service_update` call
 changes that hosted target, so inspect the corresponding diff first.
 """
